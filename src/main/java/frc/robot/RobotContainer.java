@@ -48,13 +48,14 @@ public class RobotContainer {
   private static final Angle HOLD_ANGLE = Degrees.of(115); // Example middle position
 
   private final SwerveSubsystem drivebase = new SwerveSubsystem();
-  private final Turret m_turret = new Turret();
+  private final Turret turret = new Turret();
   private final Hopper hopper = new Hopper();
   private final Kicker kicker = new Kicker();
   private final Shooter m_shooter = new Shooter();
-  private final Intake m_IntakeSubsystem = new Intake();
+  private final Intake intake = new Intake();
   
-  private final SendableChooser<Command> autoChooser;
+  SendableChooser<Command> autoChooser = new SendableChooser<>();
+  //private NamedCommandsRegistry namedCommandsRegistry;
 
   DoubleSupplier swerveSpeedScaleTranslation = () -> 1;
 	DoubleSupplier swerveSpeedScaleRotation = () -> 1;
@@ -66,13 +67,15 @@ public class RobotContainer {
       new CommandXboxController(OperatorConstants.kOperatorControllerPort);
 
   //private final SmartIntake m_runIntakes = new SmartIntake(m_IntakeSubsystem, drivebase, m_driverController);
-  private final SmartShooter m_moveShoot = new SmartShooter(m_shooter, m_turret, drivebase);
+  private final SmartShooter smartShooter = new SmartShooter(m_shooter, turret, drivebase);
 
-  private final Superstructure superstructure = new Superstructure(m_shooter, m_turret, m_IntakeSubsystem, hopper, kicker);
+  private final Superstructure superstructure = new Superstructure(m_shooter, turret, intake, hopper, kicker);
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
-
+    //this.namedCommandsRegistry = new NamedCommandsRegistry( drivebase, turret, intake, superstructure, hopper, kicker, smartShooter);
+      //setNamedCommandsForAuto();
+    
     autoChooser = AutoBuilder.buildAutoChooser();
     autoChooser.setDefaultOption("Do Nothing", Commands.none());
     autoChooser.addOption("Drive Forward", drivebase.driveForward().withTimeout(3));
@@ -89,6 +92,10 @@ public class RobotContainer {
     //    Commands.run(m_turret::stop, m_turret) // Para a torre (função alpha)
     //);
   }
+
+  /*private void setNamedCommandsForAuto() {
+    this.namedCommandsRegistry.registerAllAutoCommands();
+  }*/
   
 
   SwerveInputStream driveAngularVelocity = SwerveInputStream.of(drivebase.getSwerveDrive(),
@@ -142,29 +149,29 @@ public class RobotContainer {
 
     new Trigger(
         () -> m_operatorController.getRightTriggerAxis() > 0.1 // Use a small threshold
-    ).whileTrue(m_IntakeSubsystem.intakeCommand());
+    ).whileTrue(intake.intakeCommand());
 
     new Trigger(
         () -> m_operatorController.getLeftTriggerAxis() > 0.1 // Use a small threshold
-    ).whileTrue(m_IntakeSubsystem.ejectCommand());
+    ).whileTrue(intake.ejectCommand());
 
-    m_operatorController.povUp().onTrue(m_IntakeSubsystem.setPivotAngle(STOW_ANGLE)); 
+    m_operatorController.povUp().onTrue(intake.setPivotAngle(STOW_ANGLE)); 
 
     // D-Pad Down (180 degrees POV) moves the intake down (deployed)
-    m_operatorController.povDown().onTrue(m_IntakeSubsystem.setPivotAngle(DEPLOY_ANGLE));
+    m_operatorController.povDown().onTrue(intake.setPivotAngle(DEPLOY_ANGLE));
         
     // D-Pad Right for a "hold" position
-    m_operatorController.povRight().onTrue(m_IntakeSubsystem.setPivotAngle(HOLD_ANGLE));
+    m_operatorController.povRight().onTrue(intake.setPivotAngle(HOLD_ANGLE));
 
     // D-Pad Left to rezero the encoder
-    m_operatorController.povLeft().onTrue(m_IntakeSubsystem.rezero());
+    m_operatorController.povLeft().onTrue(intake.rezero());
 
     m_operatorController.a().whileTrue(
         superstructure.feedAllCommand()
             .finallyDo(() -> superstructure.stopFeedingAllCommand().schedule()));
 
-    m_operatorController.x().onTrue(m_moveShoot);
-    m_operatorController.y().onTrue(new InstantCommand(() -> m_moveShoot.cancel()));
+    m_operatorController.x().onTrue(smartShooter);
+    m_operatorController.y().onTrue(new InstantCommand(() -> smartShooter.cancel()));
   }
 
   public void resetEncoderPositions() {
@@ -176,7 +183,6 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    chosenAuto = autoChooser.getSelected();
     return autoChooser.getSelected();
     //return drivebase.getAutonomousCommand("9048");
     // An example command will be run in autonomous

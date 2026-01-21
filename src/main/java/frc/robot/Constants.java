@@ -79,7 +79,7 @@ public final class Constants {
 
   public static final class IntakeConstants {
     public static int kRollerMotorIdLeader = 30;
-    public static int kRollerMotorIdFollower = 31;
+    public static int kRollerMotorIdFollower = 37;
     public static int kPivotMotorId = 32;
   }
 
