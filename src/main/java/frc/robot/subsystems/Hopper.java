@@ -80,6 +80,7 @@ public class Hopper extends SubsystemBase {
   @Override
   public void periodic() {
     hopper.updateTelemetry();
+    hopper_motor.set(0.35);
   }
 
   @Override

@@ -34,7 +34,7 @@ public class Kicker extends SubsystemBase {
       .withControlMode(ControlMode.OPEN_LOOP)
       .withTelemetry("KickerMotor", TelemetryVerbosity.HIGH)
       .withGearing(new MechanismGearing(GearBox.fromReductionStages(3))) // 4:1 gear reduction
-      .withMotorInverted(true)
+      .withMotorInverted(false)
       .withIdleMode(MotorMode.BRAKE)
       .withStatorCurrentLimit(Amps.of(20));
 
@@ -69,6 +69,7 @@ public class Kicker extends SubsystemBase {
   @Override
   public void periodic() {
     kicker.updateTelemetry();
+    kicker_motor.set(-0.60);
   }
 
   @Override

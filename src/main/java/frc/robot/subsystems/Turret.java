@@ -69,7 +69,7 @@ public class Turret extends SubsystemBase {
   private final PivotConfig turretConfig = new PivotConfig(smc)
       .withHardLimit(Degrees.of(-MAX_ONE_DIR_FOV - 5), Degrees.of(MAX_ONE_DIR_FOV + 5))
       .withStartingPosition(Degrees.of(0))
-      .withMOI(0.05)
+      //.withMOI(0.05)
       .withTelemetry("Turret", TelemetryVerbosity.HIGH);
 
   private Pivot turret = new Pivot(turretConfig);

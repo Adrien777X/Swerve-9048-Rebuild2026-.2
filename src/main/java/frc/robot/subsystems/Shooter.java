@@ -104,9 +104,9 @@ public class Shooter extends SubsystemBase {
         shooter.setSpeed(RotationsPerSecond.of(rpm / 60.0));
     }
 
-    public void setRPM(LinearVelocity newHorizontalSpeed){
+    /*public void setRPM(LinearVelocity newHorizontalSpeed){
       shooter.setSpeed(RotationsPerSecond.of(newHorizontalSpeed.in(MetersPerSecond) / shooterConfig.getLength().orElseThrow().times(Math.PI).in(Meters)));
-    }
+    }*/
 
     public Command shootAtDistance(double distanceMeters) {
         return runOnce(() -> {
@@ -129,8 +129,8 @@ public class Shooter extends SubsystemBase {
         SmartDashboard.putNumber("Shooter RPM1", m_encoder1.getVelocity());
         SmartDashboard.putNumber("Shooter RPM2", m_encoder2.getVelocity());
         SmartDashboard.putNumber("Shooter Error", m_RPM-m_encoder1.getVelocity());
-        //m_motor1.set(-0.55);
-        //m_motor2.set(-0.55);
+        m_motor1.set(-0.60);
+        m_motor2.set(-0.60);
     }
 
     public boolean isAtSetpoint() {

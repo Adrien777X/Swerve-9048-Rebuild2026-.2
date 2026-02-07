@@ -131,7 +131,7 @@ public class AlignToGoal extends Command
     originalSpeed.omegaRadiansPerSecond = output + feedforwardOutput;
     swerveSubsystem.driveFieldOriented(() -> ChassisSpeeds.fromFieldRelativeSpeeds(originalSpeed,
                                                                                    new Rotation2d()));
-    shooterSubsystem.setRPM(newHorizontalSpeed);
+    //shooterSubsystem.setSpeed(newHorizontalSpeed);
   }
 
   @Override

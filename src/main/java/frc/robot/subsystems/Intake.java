@@ -50,7 +50,7 @@ public class Intake extends SubsystemBase {
       .withTelemetry("IntakeRollerMotor", TelemetryVerbosity.HIGH)
       .withMotorInverted(false)
       .withIdleMode(MotorMode.COAST)
-      .withStatorCurrentLimit(Amps.of(40))
+      .withStatorCurrentLimit(Amps.of(20))
       .withFollowers(Pair.of(new SparkMax(Constants.IntakeConstants.kRollerMotorIdFollower, MotorType.kBrushless), true));
 
     private final SmartMotorController smc = new SparkWrapper(m_rollerLeader, DCMotor.getNeo550(2), smcConfig);
