@@ -50,10 +50,7 @@ public class Superstructure extends SubsystemBase {
 
     // Create triggers for checking if mechanisms are at their targets
     this.isShooterAtSpeed = new Trigger(() -> false);
-    // this.isShooterAtSpeed = new Trigger(
-    // () -> Math.abs(shooter.getSpeed().in(RPM) - targetShooterSpeed.in(RPM)) <
-    // SHOOTER_TOLERANCE.in(RPM));
-
+    
     this.isTurretOnTarget = new Trigger(
         () -> Math.abs(turret.getAngle().in(Degrees) - targetTurretAngle.in(Degrees)) < TURRET_TOLERANCE.in(Degrees));
 
@@ -155,6 +152,10 @@ public class Superstructure extends SubsystemBase {
     return aimCommand(shooterSpeed, turretAngle, hoodAngle)
         .andThen(waitUntilReadyCommand())
         .withName("Superstructure.aimAndWait");
+  }
+
+  public Command setTurretForward() {
+    return turret.setAngle(Degrees.of(0)).withName("Superstructure.setTurretForward");
   }
 
   // Getters for current state
@@ -264,6 +265,9 @@ public class Superstructure extends SubsystemBase {
     return shooter.shootAtDistance(distanceMeters).withName("Superstructure.shootWithDistance");
   }
 
+  public Command shootCommand() {
+    return shooter.spinUp().withName("Superstructure.shoot");
+  }
   /**
    * Command to stop shooting - stops shooter.
    */

@@ -92,8 +92,8 @@ public final class Constants {
   }
 
   public static final class TurretConstants {
-    public static final int kIDVortex = 31;
-    public static final double kmaxminAngle = 120;
+    //public static final int kIDVortex = 31;
+    public static final double kmaxminAngle = 90;
     public static final double kMotorToEncoderRatio = 3.0;
     public static final double kEncoderGearToTurretGearRatio = 6.296; //170.0 / 27.0
     public static final double TotalReduction = kMotorToEncoderRatio * kEncoderGearToTurretGearRatio;
@@ -112,7 +112,6 @@ public final class Constants {
   }
 
   public static final class ShooterConstants {
-    public static final int[] kMotorIDs = { 12, 13 }; // CANID of the Motor Controller for the Sooter Motor
     public static final double kRPMTolerance = 200.0; // RPMs of error allowed before a ball can be fed into t he
                                                       // shooter
     public static final double[] kPID = { 0.0001, 0.0005, 0 }; // Defines PID values for the shooter 0.00045
@@ -120,7 +119,7 @@ public final class Constants {
     public static final double kStatic = 0.018;
     public static final double kFF = 0.00016;
     public static final double kAccelCompFactor = 0.100; // in units of seconds
-    public static final double kMaxRPM = 3600.0;
+    public static final double kMaxRPM = 4500;
     public static final double kMaxNegPower = -0.30;
 
     public static final double kHangarRPM = 1200;

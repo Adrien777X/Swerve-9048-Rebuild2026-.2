@@ -1,52 +1,33 @@
-/*package frc.robot;
+package frc.robot;
 
 import com.pathplanner.lib.auto.NamedCommands;
 
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj2.command.InstantCommand;
-import frc.robot.util.AllianceFlipUtil;
-//import frc.robot.commands.Auto.AutoScoreCoralAutonomous;
-//import frc.robot.commands.Auto.AutoUpdateOdometry;
-//import frc.robot.commands.Auto.CollectCoralAutonomous;
-//import frc.robot.commands.States.DefaultPosition;
-//import frc.robot.constants.FieldConstants.ReefLevel;
-import frc.robot.subsystems.Intake;
-import frc.robot.subsystems.Kicker;
+import frc.robot.subsystems.Shooter;
 import frc.robot.subsystems.SwerveSubsystem;
 import frc.robot.subsystems.Turret;
-import frc.robot.subsystems.Hopper;
 import frc.robot.subsystems.Superstructure;
-import frc.robot.commands.auto.ShootOnMoveWhileFeedAll;
-import frc.robot.commands.TurretedShooter.SmartShooter;
+import frc.robot.commands.auto.ShootStationaryWhileFeedAll;
 
 public class NamedCommandsRegistry {
-  Turret turret;
-  SwerveSubsystem drivebase;
-  Intake intake;
-  Hopper hopper;
-  Superstructure superstructure;
-  SmartShooter smartShooter;
-  Kicker kicker;
+  private final Turret turret;
+  private final SwerveSubsystem drivebase;
+  private final Superstructure superstructure;
+  private final Shooter shooter; // Reference to the shooter subsystem
 
-  public NamedCommandsRegistry(SwerveSubsystem drivebase,  Turret turret, Intake intake, Superstructure superstructure, Hopper hopper, Kicker kicker, SmartShooter smartShooter) {
+  // Note: Intake, Hopper, Kicker, and SmartShooter are present in the constructor but unused below.
+  public NamedCommandsRegistry(SwerveSubsystem drivebase, Turret turret, 
+                               Superstructure superstructure, Shooter shooter) {
     this.turret = turret;
     this.drivebase = drivebase;
-    this.intake = intake;
-    this.hopper = hopper;
     this.superstructure = superstructure;
-    this.smartShooter = smartShooter;
-    this.kicker = kicker;
+    this.shooter = shooter; // Assign the shooter reference
   }
 
   public void registerAllAutoCommands() {
-    //this.registerResetOdometryCommands(this.drivetrain);
-    //this.registerIntakeCommands(this.intake);
-    this.registerShootOnMoveCommand();
+    this.registerShootingCommands();
   }
 
-  private void registerShootOnMoveCommand() {
+  private void registerShootingCommands() {
 
     if (superstructure == null)
         throw new RuntimeException("Superstructure is NULL");
@@ -56,22 +37,24 @@ public class NamedCommandsRegistry {
 
     if (drivebase == null)
         throw new RuntimeException("SwerveSubsystem is NULL");
+    
+    if (shooter == null)
+        throw new RuntimeException("Shooter is NULL");
 
-    if (smartShooter == null)
-        throw new RuntimeException("SmartShooter is NULL");
 
-    ShootOnMoveWhileFeedAll shootCommand =
-        new ShootOnMoveWhileFeedAll(
+    // Create an instance of the AutoShooterSequence command group
+    ShootStationaryWhileFeedAll shootCommand =
+        new ShootStationaryWhileFeedAll(
             superstructure,
-            smartShooter,
             turret,
-            drivebase
+            drivebase,
+            shooter
         );
 
+    // Register the command with a specific name that matches your PathPlanner configuration
     NamedCommands.registerCommand(
-        "Shoot On Move Alliance Hub",
+        "Shoot Alliance Hub While Stationary", // Use a descriptive and unique name
         shootCommand
     );
-    NamedCommands.registerCommand("Shoot On Move Alliance Hub", shootCommand);
   }
-}*/
+}

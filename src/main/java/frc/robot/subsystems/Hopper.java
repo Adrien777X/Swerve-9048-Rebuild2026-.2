@@ -28,7 +28,7 @@ public class Hopper extends SubsystemBase {
   private static final double HOPPER_SPEED = 1.0;
 
   // Nova motor controller with NEO motor
-  private SparkMax hopper_motor = new SparkMax(Constants.HopperConstants.kHopperMotorId, MotorType.kBrushless);
+  private SparkMax hopper_motor = new SparkMax(Constants.HopperConstants.kHopperMotorId, MotorType.kBrushed);
 
   private SmartMotorControllerConfig smcConfig = new SmartMotorControllerConfig(this)
       .withControlMode(ControlMode.OPEN_LOOP)

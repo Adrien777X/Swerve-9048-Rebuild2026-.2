@@ -15,8 +15,6 @@ import java.util.function.Supplier;
 import org.json.simple.parser.ParseException;
 import org.littletonrobotics.junction.Logger;
 
-import com.ctre.phoenix.sensors.PigeonIMU;
-import com.ctre.phoenix6.hardware.Pigeon2;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.pathplanner.lib.commands.PathfindingCommand;
@@ -315,7 +313,7 @@ public class SwerveSubsystem extends SubsystemBase {
   }
 
   public Rotation2d getGyro() {
-    return getGyro();
+    return getHeading();
   }
 
    public void setPose(Pose2d pose) {
@@ -877,6 +875,10 @@ public class SwerveSubsystem extends SubsystemBase {
 	public void lock() {
 		swerveDrive.lockPose();
 	}
+
+	public void swerve(double vx, double vy, double vr) {
+        swerve(vx, vy, vr);
+    }
 
 	/**
 	 * Gets the current pitch angle of the robot, as reported by the imu.

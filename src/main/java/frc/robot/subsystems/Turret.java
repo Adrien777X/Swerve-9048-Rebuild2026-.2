@@ -6,6 +6,7 @@ import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.DegreesPerSecond;
 import static edu.wpi.first.units.Units.DegreesPerSecondPerSecond;
+import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.Radians;
 import static edu.wpi.first.units.Units.Second;
 import static edu.wpi.first.units.Units.Seconds;
@@ -17,6 +18,7 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -25,6 +27,7 @@ import frc.robot.Constants.TurretConstants;
 import frc.robot.util.MathUtils;
 import yams.gearing.GearBox;
 import yams.gearing.MechanismGearing;
+import yams.mechanisms.config.MechanismPositionConfig;
 import yams.mechanisms.config.PivotConfig;
 import yams.mechanisms.positional.Pivot;
 import yams.motorcontrollers.SmartMotorController;
@@ -36,7 +39,7 @@ import yams.motorcontrollers.local.SparkWrapper;
 import edu.wpi.first.units.measure.Angle;
 
 public class Turret extends SubsystemBase {
-  private final SparkFlex m_motor = new SparkFlex(TurretConstants.kIDVortex, MotorType.kBrushless);
+  private final SparkFlex m_motor = new SparkFlex(31, MotorType.kBrushless);
 
   private final double MAX_ONE_DIR_FOV = TurretConstants.kmaxminAngle;
   private boolean m_trackTarget = false;
@@ -44,7 +47,7 @@ public class Turret extends SubsystemBase {
 
   private SmartMotorControllerConfig smcConfig = new SmartMotorControllerConfig(this)
     .withControlMode(ControlMode.CLOSED_LOOP)
-    .withClosedLoopController(100, 0, 0, DegreesPerSecond.of(180), DegreesPerSecondPerSecond.of(180))
+    .withClosedLoopController(5, 0, 0, DegreesPerSecond.of(180), DegreesPerSecondPerSecond.of(180))
     .withFeedforward(new ArmFeedforward(0, 0, 0.1))
     .withTelemetry("TurretMotor", TelemetryVerbosity.HIGH)
     .withGearing(new MechanismGearing(GearBox.fromReductionStages(5, 3.69565217391)))
@@ -56,6 +59,12 @@ public class Turret extends SubsystemBase {
     .withOpenLoopRampRate(Seconds.of(0.1));
 
   private SmartMotorController smc = new SparkWrapper(m_motor, DCMotor.getNeoVortex(1), smcConfig);
+
+  private final MechanismPositionConfig    robotToMechanism = new MechanismPositionConfig()
+      .withMaxRobotHeight(Meters.of(0.52))
+      .withMaxRobotLength(Meters.of(0.68))
+      .withRelativePosition(new Translation3d(Meters.of(-0.22), Meters.of(0), Meters.of(0.45)));
+
 
   private final PivotConfig turretConfig = new PivotConfig(smc)
       .withHardLimit(Degrees.of(-MAX_ONE_DIR_FOV - 5), Degrees.of(MAX_ONE_DIR_FOV + 5))

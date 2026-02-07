@@ -155,13 +155,14 @@ public class RobotContainer {
         () -> m_operatorController.getLeftTriggerAxis() > 0.1 // Use a small threshold
     ).whileTrue(intake.ejectCommand());
 
+    m_operatorController.rightBumper().whileTrue(superstructure.setIntakeDeployAndRoll().withName("OperatorControls.intakedeployed"));
     m_operatorController.povUp().onTrue(intake.setPivotAngle(STOW_ANGLE)); 
 
     // D-Pad Down (180 degrees POV) moves the intake down (deployed)
     m_operatorController.povDown().onTrue(intake.setPivotAngle(DEPLOY_ANGLE));
         
     // D-Pad Right for a "hold" position
-    m_operatorController.povRight().onTrue(intake.setPivotAngle(HOLD_ANGLE));
+    m_operatorController.povRight().onTrue(intake.setPivotAngle(Degrees.of(148)));
 
     // D-Pad Left to rezero the encoder
     m_operatorController.povLeft().onTrue(intake.rezero());
@@ -172,6 +173,7 @@ public class RobotContainer {
 
     m_operatorController.x().onTrue(smartShooter);
     m_operatorController.y().onTrue(new InstantCommand(() -> smartShooter.cancel()));
+    //m_driverController.y().onTrue(superstructure.shootCommand());
   }
 
   public void resetEncoderPositions() {

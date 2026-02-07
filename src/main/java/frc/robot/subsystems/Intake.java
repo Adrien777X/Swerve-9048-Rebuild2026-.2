@@ -2,9 +2,6 @@ package frc.robot.subsystems;
 
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
-import com.revrobotics.spark.config.SparkFlexConfig;
-import com.revrobotics.spark.config.SparkMaxConfig;
-import com.revrobotics.spark.SparkBase;
 import com.revrobotics.spark.SparkMax;
 
 import static edu.wpi.first.units.Units.Amps;
@@ -51,32 +48,34 @@ public class Intake extends SubsystemBase {
       .withControlMode(ControlMode.OPEN_LOOP)
       .withGearing(new MechanismGearing(GearBox.fromReductionStages(3)))
       .withTelemetry("IntakeRollerMotor", TelemetryVerbosity.HIGH)
-      .withMotorInverted(true)
+      .withMotorInverted(false)
       .withIdleMode(MotorMode.COAST)
       .withStatorCurrentLimit(Amps.of(40))
-      .withFollowers(Pair.of(new SparkMax(Constants.IntakeConstants.kRollerMotorIdFollower, MotorType.kBrushless), false));
+      .withFollowers(Pair.of(new SparkMax(Constants.IntakeConstants.kRollerMotorIdFollower, MotorType.kBrushless), true));
 
     private final SmartMotorController smc = new SparkWrapper(m_rollerLeader, DCMotor.getNeo550(2), smcConfig);
 
     private final FlyWheelConfig intakeConfig = new FlyWheelConfig(smc)
       .withDiameter(Inches.of(2))
       .withMass(Grams.of(2229))
-      .withUpperSoftLimit(RPM.of(11000))
-      .withLowerSoftLimit(RPM.of(-11000))
+      .withUpperSoftLimit(RPM.of(30))
+      .withLowerSoftLimit(RPM.of(-30))
       .withTelemetry("IntakeRoller", TelemetryVerbosity.HIGH);
 
     private FlyWheel intake = new FlyWheel(intakeConfig);
 
     private SmartMotorControllerConfig intakePivotSmartMotorConfig = new SmartMotorControllerConfig(this)
       .withControlMode(ControlMode.CLOSED_LOOP)
-      .withClosedLoopController(10, 0, 0, DegreesPerSecond.of(1080), DegreesPerSecondPerSecond.of(1080))
-      .withFeedforward(new ArmFeedforward(0, 0, 1.3))
+      .withClosedLoopController(25, 0, 0, DegreesPerSecond.of(180), DegreesPerSecondPerSecond.of(180))
+      .withFeedforward(new ArmFeedforward(0, 10, 0))
       .withTelemetry("IntakePivotMotor", TelemetryVerbosity.HIGH)
       .withGearing(new MechanismGearing(GearBox.fromReductionStages(60.0)))
-      .withMotorInverted(false)
+      .withMotorInverted(true)
       .withIdleMode(MotorMode.COAST)
-      .withStatorCurrentLimit(Amps.of(10))
-      .withClosedLoopRampRate(Seconds.of(0.1));
+      //.withSoftLimit(Degrees.of(0), Degrees.of(150))
+      .withStatorCurrentLimit(Amps.of(20))
+      .withClosedLoopRampRate(Seconds.of(0.1))
+      .withOpenLoopRampRate(Seconds.of(0.1));
 
     private SparkFlex pivotMotor = new SparkFlex(Constants.IntakeConstants.kPivotMotorId, MotorType.kBrushless);
 
@@ -93,8 +92,8 @@ public class Intake extends SubsystemBase {
     private Arm intakePivot = new Arm(intakePivotConfig);
 
     public Intake() {
-      pivotMotor.configure(new SparkFlexConfig(), SparkBase.ResetMode.kResetSafeParameters, SparkBase.PersistMode.kPersistParameters);
-      m_rollerLeader.configure(new SparkMaxConfig(), SparkBase.ResetMode.kResetSafeParameters, SparkBase.PersistMode.kPersistParameters);
+      //pivotMotor.configure(new SparkFlexConfig(), SparkBase.ResetMode.kResetSafeParameters, SparkBase.PersistMode.kPersistParameters);
+      //m_rollerLeader.configure(new SparkMaxConfig(), SparkBase.ResetMode.kResetSafeParameters, SparkBase.PersistMode.kPersistParameters);
     }
 
     public Command intakeCommand() {
@@ -102,7 +101,7 @@ public class Intake extends SubsystemBase {
     }
 
     public Command ejectCommand() {
-      return intake.set(-INTAKE_SPEED).finallyDo(() -> smc.setDutyCycle(0)).withName("Intake.Run");
+      return intake.set(-INTAKE_SPEED).finallyDo(() -> smc.setDutyCycle(0)).withName("Intake.Eject");
     }
 
     public Command setPivotAngle(Angle angle) {
