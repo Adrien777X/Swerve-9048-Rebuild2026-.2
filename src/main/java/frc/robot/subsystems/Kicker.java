@@ -25,7 +25,7 @@ import yams.motorcontrollers.local.SparkWrapper;
 
 public class Kicker extends SubsystemBase {
 
-  private static final double KICKER_SPEED = 1.0;
+  private static final double KICKER_SPEED = 0.62;
 
   // Nova motor controller with NEO motor
   private SparkMax kicker_motor = new SparkMax(Constants.KickerConstants.kKickerMotorId, MotorType.kBrushless);
@@ -56,7 +56,7 @@ public class Kicker extends SubsystemBase {
    * Command to run the kicker forward while held, stops when released.
    */
   public Command feedCommand() {
-    return kicker.set(KICKER_SPEED).finallyDo(() -> smc.setDutyCycle(0)).withName("Kicker.Feed");
+    return kicker.set(-0.60).finallyDo(() -> smc.setDutyCycle(0)).withName("Kicker.Feed");
   }
 
   /**
@@ -69,7 +69,7 @@ public class Kicker extends SubsystemBase {
   @Override
   public void periodic() {
     kicker.updateTelemetry();
-    kicker_motor.set(-0.60);
+    //kicker_motor.set(-0.60);
   }
 
   @Override
