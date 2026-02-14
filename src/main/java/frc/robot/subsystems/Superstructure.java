@@ -3,13 +3,20 @@ package frc.robot.subsystems;
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.Meter;
 import static edu.wpi.first.units.Units.RPM;
+
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.LinearVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.Constants;
 
 /**
  * Superstructure coordinates the shooter, turret, hood, and intake subsystems
@@ -18,45 +25,49 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 public class Superstructure extends SubsystemBase {
 
   private final Shooter shooter;
-  private final Turret turret;
+  public final Turret turret;
+  private final HoodSubsystem hood;
   private final Intake intake;
   private final Hopper hopper;
   private final Kicker kicker;
 
-  // Default values for "ready" state
-  private static final AngularVelocity DEFAULT_SHOOTER_SPEED = RPM.of(4000);
-  private static final Angle DEFAULT_TURRET_ANGLE = Degrees.of(0);
-
   // Tolerance for "at setpoint" checks
-  //private static final AngularVelocity SHOOTER_TOLERANCE = RPM.of(100);
-  private static final Angle TURRET_TOLERANCE = Degrees.of(2);
-  //private static final Angle HOOD_TOLERANCE = Degrees.of(2);
+  private static final AngularVelocity SHOOTER_TOLERANCE = RPM.of(100);
+  private static final Angle TURRET_TOLERANCE = Degrees.of(1);
+  private static final Angle HOOD_TOLERANCE = Degrees.of(2);
 
   // Triggers for readiness checks
   public final Trigger isShooterAtSpeed;
   public final Trigger isTurretOnTarget;
+  private final Trigger isHoodOnTarget;
   public final Trigger isReadyToShoot;
 
   private AngularVelocity targetShooterSpeed = RPM.of(0);
   private Angle targetTurretAngle = Degrees.of(0);
+  private Angle targetHoodAngle = Degrees.of(0);
 
-  public Superstructure(Shooter shooter, Turret turret, Intake intake,
+  private Translation3d aimPoint = Constants.AimPoints.RED_HUB.value;
+
+  public Superstructure(Shooter shooter, Turret turret, HoodSubsystem hood, Intake intake,
       Hopper hopper, Kicker kicker) {
     this.shooter = shooter;
     this.turret = turret;
+    this.hood = hood;
     this.intake = intake;
     this.hopper = hopper;
     this.kicker = kicker;
 
     // Create triggers for checking if mechanisms are at their targets
-    this.isShooterAtSpeed = new Trigger(() -> false);
-    
-    this.isTurretOnTarget = new Trigger(
-        () -> Math.abs(turret.getAngle().in(Degrees) - targetTurretAngle.in(Degrees)) < TURRET_TOLERANCE.in(Degrees));
+    this.isShooterAtSpeed = new Trigger(
+        () -> Math.abs(shooter.getSpeed().in(RPM) - targetShooterSpeed.in(RPM)) < SHOOTER_TOLERANCE.in(RPM));
 
-    this.isReadyToShoot = new Trigger(() -> false);
-    // this.isReadyToShoot =
-    // isShooterAtSpeed.and(isTurretOnTarget).and(isHoodOnTarget);
+    this.isTurretOnTarget = new Trigger(
+      () -> Math.abs(turret.getRawAngle().in(Degrees) - targetTurretAngle.in(Degrees)) < TURRET_TOLERANCE.in(Degrees));
+
+    this.isHoodOnTarget = new Trigger(
+        () -> Math.abs(hood.getAngle().in(Degrees) - targetHoodAngle.in(Degrees)) < HOOD_TOLERANCE.in(Degrees));
+
+    this.isReadyToShoot = isShooterAtSpeed.and(isTurretOnTarget).and(isHoodOnTarget);
   }
 
   /**
@@ -65,38 +76,8 @@ public class Superstructure extends SubsystemBase {
   public Command stopAllCommand() {
     return Commands.parallel(
         shooter.stopCommand().asProxy(),
-        turret.set(0).asProxy()).withName("Superstructure.stopAll");
-  }
-
-  /**
-   * Moves all mechanisms to a default "ready" state:
-   * - Shooter spun up to default speed
-   * - Turret centered
-   * - Hood at 45 degrees
-   */
-  public Command readyCommand() {
-    return Commands.runOnce(() -> {
-      targetShooterSpeed = DEFAULT_SHOOTER_SPEED;
-      targetTurretAngle = DEFAULT_TURRET_ANGLE;
-    }).andThen(
-        Commands.parallel(
-            // shooter.setSpeed(DEFAULT_SHOOTER_SPEED).asProxy(),
-            turret.center().asProxy()))
-        .withName("Superstructure.ready");
-  }
-
-  /**
-   * Stows the superstructure - stops shooter, centers turret, stows hood.
-   */
-  public Command stowCommand() {
-    return Commands.runOnce(() -> {
-      targetShooterSpeed = RPM.of(0);
-      targetTurretAngle = Degrees.of(0);
-    }).andThen(
-        Commands.parallel(
-            // shooter.stop().asProxy(),
-            turret.center().asProxy()))
-        .withName("Superstructure.stow");
+        turret.set(0).asProxy(),
+        hood.set(0).asProxy()).withName("Superstructure.stopAll");
   }
 
   /**
@@ -110,11 +91,19 @@ public class Superstructure extends SubsystemBase {
     return Commands.runOnce(() -> {
       targetShooterSpeed = shooterSpeed;
       targetTurretAngle = turretAngle;
+      targetHoodAngle = hoodAngle;
     }).andThen(
         Commands.parallel(
             // shooter.setSpeed(shooterSpeed).asProxy(),
-            turret.setAngle(turretAngle).asProxy()))
+            turret.setAngle(turretAngle).asProxy(),
+            hood.setAngle(hoodAngle).asProxy()))
         .withName("Superstructure.aim");
+  }
+
+  public void setShooterSetpoints(AngularVelocity shooterSpeed, Angle turretAngle, Angle hoodAngle) {
+    targetShooterSpeed = shooterSpeed;
+    targetTurretAngle = turretAngle;
+    targetHoodAngle = hoodAngle;
   }
 
   /**
@@ -128,13 +117,10 @@ public class Superstructure extends SubsystemBase {
       Supplier<AngularVelocity> shooterSpeedSupplier,
       Supplier<Angle> turretAngleSupplier,
       Supplier<Angle> hoodAngleSupplier) {
-    return Commands.run(() -> {
-      targetShooterSpeed = shooterSpeedSupplier.get();
-      targetTurretAngle = turretAngleSupplier.get();
-    }).alongWith(
-        Commands.parallel(
-            // shooter.setSpeed(shooterSpeedSupplier.get()).asProxy(),
-            turret.setAngle(turretAngleSupplier.get()).asProxy()))
+    return Commands.parallel(
+        shooter.setSpeedDynamic(shooterSpeedSupplier).asProxy(),
+        turret.setAngleDynamic(turretAngleSupplier).asProxy(),
+        hood.setAngleDynamic(hoodAngleSupplier).asProxy())
         .withName("Superstructure.aimDynamic");
   }
 
@@ -149,7 +135,7 @@ public class Superstructure extends SubsystemBase {
    * Aims and waits until ready - combines aim and wait.
    */
   public Command aimAndWaitCommand(AngularVelocity shooterSpeed, Angle turretAngle, Angle hoodAngle) {
-    return aimCommand(shooterSpeed, turretAngle, hoodAngle)
+    return aimDynamicCommand(() -> shooterSpeed, () -> turretAngle, () -> hoodAngle)
         .andThen(waitUntilReadyCommand())
         .withName("Superstructure.aimAndWait");
   }
@@ -158,13 +144,25 @@ public class Superstructure extends SubsystemBase {
     return turret.setAngle(Degrees.of(0)).withName("Superstructure.setTurretForward");
   }
 
+  public Command setTurretLeft() {
+    return turret.setAngle(Degrees.of(45)).withName("Superstructure.setTurretLeft");
+  }
+
+  public Command setTurretRight() {
+    return turret.setAngle(Degrees.of(-45)).withName("Superstructure.setTurretRight");
+  }
+
   // Getters for current state
-  // public AngularVelocity getShooterSpeed() {
-  // return shooter.getSpeed();
-  // }
+  public AngularVelocity getShooterSpeed() {
+    return shooter.getSpeed();
+  }
 
   public Angle getTurretAngle() {
-    return turret.getAngle();
+    return turret.getRawAngle();
+  }
+
+  public Angle getHoodAngle() {
+    return Degrees.of(45);
   }
 
   public AngularVelocity getTargetShooterSpeed() {
@@ -173,6 +171,27 @@ public class Superstructure extends SubsystemBase {
 
   public Angle getTargetTurretAngle() {
     return targetTurretAngle;
+  }
+
+  public Angle getTargetHoodAngle() {
+    return Degrees.of(45);
+  }
+
+  public Translation3d getAimPoint() {
+    return aimPoint;
+  }
+
+  public void setAimPoint(Translation3d newAimPoint) {
+    this.aimPoint = newAimPoint;
+  }
+
+  public Rotation3d getAimRotation3d() {
+    // See
+    // https://docs.wpilib.org/en/stable/docs/software/basic-programming/coordinate-system.html
+    return new Rotation3d(
+        Degrees.of(0), // no roll
+        hood.getAngle().unaryMinus(), // pitch is negative hood angle
+        turret.getRobotAdjustedAngle());
   }
 
   /**
@@ -221,7 +240,7 @@ public class Superstructure extends SubsystemBase {
     return Commands.parallel(
         hopper.feedCommand().asProxy(),
         kicker.feedCommand().asProxy()).withName("Superstructure.feedAll");
-        //intake.setPivotAngle(Degrees.of(46)).asProxy()).withName("Superstructure.feedAll")
+    // intake.setPivotAngle(Degrees.of(46)).asProxy()).withName("Superstructure.feedAll");
   }
 
   public Command backFeedAllCommand() {
@@ -258,30 +277,65 @@ public class Superstructure extends SubsystemBase {
   public Command setIntakeDeployAndRoll() {
     return intake.deployAndRollCommand().withName("Superstructure.setIntakeDeployAndRoll");
   }
+
   /**
    * Command to shoot - spins up shooter.
    */
-  public Command shootWithDistanceCommand(double distanceMeters) {
-    return shooter.shootAtDistance(distanceMeters).withName("Superstructure.shootWithDistance");
-  }
-
   public Command shootCommand() {
+    // return shooter.sysId().withName("Superstructure.shoot");
     return shooter.spinUp().withName("Superstructure.shoot");
   }
+
   /**
    * Command to stop shooting - stops shooter.
    */
   public Command stopShootingCommand() {
-    return shooter.stopCommand().withName("Superstructure.stopShooting");
+    return shooter.stop().withName("Superstructure.stopShooting");
   }
 
   // Re-zero intake pivot if needed
-  public Command rezeroIntakePivotCommand() {
-    return intake.rezero().withName("Superstructure.rezeroIntakePivot");
+  public Command rezeroIntakePivotAndTurretCommand() {
+    return Commands.parallel(
+        turret.rezero().withName("Superstructure.rezeroTurret"),
+        intake.rezero().withName("Superstructure.rezeroIntakePivot"))
+        .withName("Superstructure.rezeroIntakePivotAndTurret");
   }
 
   @Override
   public void periodic() {
     // Superstructure doesn't need periodic updates - subsystems handle their own
+
+    String shooterOut = "S:" + isShooterAtSpeed.getAsBoolean() + "(" + Math.round(shooter.getSpeed().in(RPM)) + "/"
+        + Math.round(targetShooterSpeed.in(RPM)) + ")";
+
+    String turretOut = "T:" + isTurretOnTarget.getAsBoolean() + "(" + Math.round(turret.getRawAngle().in(Degrees)) + "/"
+        + Math.round(targetTurretAngle.in(Degrees)) + ")";
+
+    String hoodOut = "H:" + isHoodOnTarget.getAsBoolean() + "(" + Math.round(hood.getAngle().in(Degrees)) + "/"
+        + Math.round(targetHoodAngle.in(Degrees)) + ")";
+
+    String readyOut = "R:" + isReadyToShoot.getAsBoolean();
+
+    // System.out.println(shooterOut + " " + turretOut + " " + hoodOut + " " +
+    // readyOut);
+  }
+
+  public Command useRequirement() {
+    return runOnce(() -> {
+    });
+  }
+
+  public Pose3d getShooterPose() {
+    // Position of the shooter relative to the "front" of the robot. Rotation
+    // element is based on hood and turret angles
+    return new Pose3d(new Translation3d(
+        Meter.of(-0.3),
+        Meter.of(0),
+        Meter.of(0.6)),
+        getAimRotation3d());
+  }
+
+  public LinearVelocity getTangentialVelocity() {
+    return shooter.getTangentialVelocity();
   }
 }

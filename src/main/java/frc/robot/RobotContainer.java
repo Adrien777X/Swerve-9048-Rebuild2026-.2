@@ -4,9 +4,27 @@
 
 package frc.robot;
 
+import org.ironmaple.simulation.SimulatedArena;
+import org.ironmaple.simulation.gamepieces.GamePieceProjectile;
+import org.littletonrobotics.junction.Logger;
+
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Translation2d;
+import static edu.wpi.first.units.Units.Feet;
+import static edu.wpi.first.units.Units.FeetPerSecond;
+import edu.wpi.first.units.measure.Distance;
+import edu.wpi.first.units.measure.LinearVelocity;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import frc.robot.commands.TurretedShooter.ShootOnTheMoveCommand;
+import frc.robot.subsystems.Superstructure;
+import frc.robot.subsystems.SwerveSubsystem;
+import frc.robot.util.maplesim.RebuiltFuelOnFly;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.Constants.ShooterConstants;
-import frc.robot.commands.TurretedShooter.SmartShooter;
+import frc.robot.subsystems.ClimberSubsystem;
+import frc.robot.subsystems.HoodSubsystem;
 import frc.robot.subsystems.Hopper;
 import frc.robot.subsystems.Intake;
 import frc.robot.subsystems.Kicker;
@@ -20,6 +38,8 @@ import swervelib.SwerveInputStream;
 import java.util.function.DoubleSupplier;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -27,12 +47,14 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import static edu.wpi.first.units.Units.Degrees;
 
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.path.PathPlannerPath;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -49,6 +71,8 @@ public class RobotContainer {
 
   private final SwerveSubsystem drivebase = new SwerveSubsystem();
   private final Turret turret = new Turret();
+  private final HoodSubsystem hood =  new HoodSubsystem();
+  private final ClimberSubsystem climber = new ClimberSubsystem();
   private final Hopper hopper = new Hopper();
   private final Kicker kicker = new Kicker();
   private final Shooter m_shooter = new Shooter();
@@ -66,10 +90,7 @@ public class RobotContainer {
   private final CommandXboxController m_operatorController =
       new CommandXboxController(OperatorConstants.kOperatorControllerPort);
 
-  //private final SmartIntake m_runIntakes = new SmartIntake(m_IntakeSubsystem, drivebase, m_driverController);
-  private final SmartShooter smartShooter = new SmartShooter(m_shooter, turret, drivebase);
-
-  private final Superstructure superstructure = new Superstructure(m_shooter, turret, intake, hopper, kicker);
+  private final Superstructure superstructure = new Superstructure(m_shooter, turret, hood, intake, hopper, kicker);
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -88,9 +109,6 @@ public class RobotContainer {
     // Configure the trigger bindings
     configureBindings();
     drivebase.setDefaultCommand(driveFieldOrientedAngularVelocity);
-    //m_turret.setDefaultCommand(
-    //    Commands.run(m_turret::stop, m_turret) // Para a torre (função alpha)
-    //);
   }
 
   /*private void setNamedCommandsForAuto() {
@@ -128,13 +146,20 @@ public class RobotContainer {
     Command driveFieldOrientedDirectAngle = drivebase.driveFieldOriented(driveDriectAngle);
     drivebase.setDefaultCommand(driveFieldOrientedDirectAngle);
 
-
     /* Schedule `ExampleCommand` when `exampleCondition` changes to `true`
     new Trigger(m_exampleSubsystem::exampleCondition)
         .onTrue(new ExampleCommand(m_exampleSubsystem));*/
 
     // Schedule `exampleMethodCommand` when the Xbox controller's B button is pressed,
     // cancelling on release.
+
+    /*m_operatorController.rightBumper().whileTrue(
+        climber.setClimberMotorSpeed(-0.2)
+            .finallyDo(() -> climber.setClimberMotorSpeed(0)));
+
+    m_operatorController.leftBumper().whileTrue(
+        climber.setClimberMotorSpeed(0.2)
+            .finallyDo(() -> climber.setClimberMotorSpeed(0)));*/
     
     m_driverController.povUp().onTrue((Commands.runOnce(()->drivebase.zeroGyro(), drivebase)));
 
@@ -155,20 +180,24 @@ public class RobotContainer {
         () -> m_operatorController.getLeftTriggerAxis() > 0.1 // Use a small threshold
     ).whileTrue(intake.ejectCommand());
 
-
     //m_operatorController.rightBumper().whileTrue(superstructure.setIntakeDeployAndRoll().withName("OperatorControls.intakedeployed"));
-    m_operatorController.povUp().onTrue(intake.setPivotAngle(STOW_ANGLE)); 
+    //m_operatorController.povUp().onTrue(intake.setPivotAngle(STOW_ANGLE)); 
 
     // D-Pad Down (180 degrees POV) moves the intake down (deployed)
     m_operatorController.povDown().onTrue(intake.setPivotAngle(DEPLOY_ANGLE));
         
     // D-Pad Right for a "hold" position
-    m_operatorController.povRight().onTrue(intake.setPivotAngle(Degrees.of(148)));
+    //m_operatorController.povRight().onTrue(intake.setPivotAngle(Degrees.of(148)));
 
     // D-Pad Left to rezero the encoder
-    m_operatorController.povLeft().onTrue(intake.rezero());
+    //m_operatorController.povLeft().onTrue(intake.rezero());
 
-    m_operatorController.rightBumper()
+    m_operatorController.x().toggleOnTrue(
+        new ShootOnTheMoveCommand(drivebase, superstructure, () -> superstructure.getAimPoint())
+            .ignoringDisable(true)
+            .withName("OperatorControls.aimCommand"));
+
+    m_operatorController.y()
         .whileTrue(superstructure.setIntakeDeployAndRoll().withName("OperatorControls.intakeDeployed"));
     
     m_operatorController.a().whileTrue(
@@ -179,9 +208,42 @@ public class RobotContainer {
         superstructure.backFeedAllCommand()
             .finallyDo(() -> superstructure.stopFeedingAllCommand().schedule()));
 
-    m_operatorController.x().onTrue(smartShooter);
-    m_operatorController.y().onTrue(new InstantCommand(() -> smartShooter.cancel()));
-    //m_driverController.y().onTrue(superstructure.shootCommand());
+    m_operatorController.povUp().onTrue(superstructure.setTurretForward().withName("OperatorControls.setTurretForward"));
+    m_operatorController.povLeft().onTrue(superstructure.setTurretLeft().withName("OperatorControls.setTurretLeft"));
+    m_operatorController.povRight().onTrue(superstructure.setTurretRight().withName("OperatorControls.setTurretRight"));
+    //m_operatorController.y().onTrue(superstructure.shootCommand());
+    //m_operatorController.x().onTrue(superstructure.stopShootingCommand());
+  }
+
+  public static Command fireFuel(SwerveSubsystem drivetrain, Superstructure superstructure) {
+    return Commands.runOnce(() -> {
+      SimulatedArena arena = SimulatedArena.getInstance();
+
+      GamePieceProjectile fuel = new RebuiltFuelOnFly(
+          drivetrain.getPose().getTranslation(),
+          new Translation2d(
+              superstructure.turret.turretTranslation.getX() * -1,
+              superstructure.turret.turretTranslation.getY()),
+          drivetrain.getSwerveDrive().getRobotVelocity(),
+          drivetrain.getPose().getRotation().rotateBy(superstructure.getAimRotation3d().toRotation2d()),
+          superstructure.turret.turretTranslation.getMeasureZ(),
+
+          // 0.5 times because we're applying spin to the fuel as we shoot it
+          superstructure.getTangentialVelocity().times(0.5),
+          superstructure.getHoodAngle());
+
+      // Configure callbacks to visualize the flight trajectory of the projectile
+      fuel.withProjectileTrajectoryDisplayCallBack(
+          // Callback for when the note will eventually hit the target (if configured)
+          (pose3ds) -> Logger.recordOutput("FieldSimulation/Shooter/ProjectileSuccessfulShot",
+              pose3ds.toArray(Pose3d[]::new)),
+          // Callback for when the note will eventually miss the target, or if no target
+          // is configured
+          (pose3ds) -> Logger.recordOutput("FieldSimulation/Shooter/ProjectileUnsuccessfulShot",
+              pose3ds.toArray(Pose3d[]::new)));
+
+      arena.addGamePieceProjectile(fuel);
+    });
   }
 
   public void resetEncoderPositions() {

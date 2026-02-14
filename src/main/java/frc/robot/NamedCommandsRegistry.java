@@ -1,4 +1,4 @@
-package frc.robot;
+/*package frc.robot;
 
 import com.pathplanner.lib.auto.NamedCommands;
 
@@ -57,4 +57,4 @@ public class NamedCommandsRegistry {
         shootCommand
     );
   }
-}
+}*/

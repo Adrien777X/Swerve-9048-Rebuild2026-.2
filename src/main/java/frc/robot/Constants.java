@@ -7,6 +7,7 @@ package frc.robot;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.DriverStation;
 import swervelib.math.Matter;
 import frc.robot.util.LinearInterpolationTable;
 
@@ -22,26 +23,39 @@ import java.awt.geom.Point2D;
  */
 public final class Constants {
 
+  public static enum AimPoints {
+    RED_HUB(new Translation3d(11.938, 4.034536, 1.5748)),
+    RED_OUTPOST(new Translation3d(15.75, 7.25, 0)),
+    RED_FAR_SIDE(new Translation3d(15.75, 0.75, 0)),
+
+    BLUE_HUB(new Translation3d(4.5974, 4.034536, 1.5748)),
+    BLUE_OUTPOST(new Translation3d(0.75, 0.75, 0)),
+    BLUE_FAR_SIDE(new Translation3d(0.75, 7.25, 0));
+
+    public final Translation3d value;
+
+    private AimPoints(Translation3d value) {
+      this.value = value;
+    }
+
+    public static final Translation3d getAllianceHubPosition() {
+      return DriverStation.getAlliance().get() == DriverStation.Alliance.Red ? RED_HUB.value : BLUE_HUB.value;
+    }
+
+    public static final Translation3d getAllianceOutpostPosition() {
+      return DriverStation.getAlliance().get() == DriverStation.Alliance.Red ? RED_OUTPOST.value : BLUE_OUTPOST.value;
+    }
+
+    public static final Translation3d getAllianceFarSidePosition() {
+      return DriverStation.getAlliance().get() == DriverStation.Alliance.Red ? RED_FAR_SIDE.value : BLUE_FAR_SIDE.value;
+    }
+  }
+
   public static final double ROBOT_MASS = 90 * 0.453592;
   public static final Matter CHASSIS = new Matter(new Translation3d(0, 0, Units.inchesToMeters(11.2)), ROBOT_MASS);
   public static final double LOOP_TIME = 0.13;
   public static final double MAX_SPEED = Units.feetToMeters(15);
 
-  public static final class GoalConstants {
-    public static final Translation2d kGoalLocation = new Translation2d(4.031, 4.115);
-    public static final Translation2d kWrongBallGoal = new Translation2d(3.00, 4.115);
-    //public static final Translation2d kHangerLocation = new Translation2d(2.00, 6.00);
-
-  }
-
-  
-
-  public static final class GlobalConstants {
-    public static final double kVoltCompensation = 12.6; // Sets a voltage compensation value ideally 12.6V
-    public static final int PCHID = 20;
-    public static final int PDHID = 24;
-    public static final double kLoopTime = 0.020;
-  }
 
   public static class OperatorConstants {
     public static final int kDriverControllerPort = 0;
@@ -112,49 +126,10 @@ public final class Constants {
   }
 
   public static final class ShooterConstants {
-    public static final double kRPMTolerance = 200.0; // RPMs of error allowed before a ball can be fed into t he
-                                                      // shooter
-    public static final double[] kPID = { 0.0001, 0.0005, 0 }; // Defines PID values for the shooter 0.00045
-    public static final double kIntRange = 0.015;
-    public static final double kStatic = 0.018;
-    public static final double kFF = 0.00016;
-    public static final double kAccelCompFactor = 0.100; // in units of seconds
-    public static final double kMaxRPM = 4500;
-    public static final double kMaxNegPower = -0.30;
-
-    public static final double kHangarRPM = 1200;
-    private static final Point2D[] kRPMPoints = new Point2D.Double[] {
-        // (ty-angle,distance)
-        new Point2D.Double(35, 1500+10),
-        new Point2D.Double(55, 1860+10),
-        new Point2D.Double(80, 2000+10), //
-        new Point2D.Double(105, 2100+10), //
-        new Point2D.Double(130, 2170+20), //
-        new Point2D.Double(155, 2245+30), //
-        new Point2D.Double(165, 2380), //
-        new Point2D.Double(180, 2465+30), //
-        new Point2D.Double(205, 2670+30), //
-        new Point2D.Double(230, 2840+35), //
-        new Point2D.Double(255, 2980+40), //
-        new Point2D.Double(270, 3300), //
-        new Point2D.Double(280, 3350+60)
-
-    };
-
-    public static final LinearInterpolationTable kRPMTable = new LinearInterpolationTable(kRPMPoints);
-
-    private static final Point2D[] kShotTimes = new Point2D.Double[] {
-        // (ty-angle,time)
-        new Point2D.Double(80, 0.78),
-        new Point2D.Double(130, 0.80),
-        new Point2D.Double(190, 0.81),
-        new Point2D.Double(240, 0.82),
-        new Point2D.Double(280, 0.83)
-    };
-
-    public static final LinearInterpolationTable kTimeTable = new LinearInterpolationTable(kShotTimes);
+    
   }
-  // Auto constants
+
+  // Auto constants OLD APRIL TAG ALIGN REEFSCAPE 2025
   public static final double MAX_ALIGN_TRANSLATION_SPEED = 0.8; // m/s
   public static final double MAX_ALIGN_ROTATION_SPEED = 1.5;    // rad/s
 

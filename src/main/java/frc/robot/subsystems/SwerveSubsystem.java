@@ -7,13 +7,13 @@ package frc.robot.subsystems;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 import org.json.simple.parser.ParseException;
-import org.littletonrobotics.junction.Logger;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.commands.PathPlannerAuto;
@@ -27,6 +27,7 @@ import com.pathplanner.lib.util.DriveFeedforwards;
 import com.pathplanner.lib.util.swerve.SwerveSetpoint;
 import com.pathplanner.lib.util.swerve.SwerveSetpointGenerator;
 
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -38,35 +39,28 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.util.Units;
 import static edu.wpi.first.units.Units.DegreesPerSecond;
-import static edu.wpi.first.units.Units.Inches;
 import static edu.wpi.first.units.Units.Meter;
-import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.Degrees;
-import static edu.wpi.first.units.Units.Radians;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 import frc.robot.Constants;
-import frc.robot.LimelightHelpers;
-import frc.robot.Constants.GlobalConstants;
 import frc.robot.util.FieldRelativeAccel;
 import frc.robot.util.FieldRelativeSpeed;
 import limelight.Limelight;
 import limelight.networktables.AngularVelocity3d;
 import limelight.networktables.LimelightPoseEstimator;
 import limelight.networktables.LimelightPoseEstimator.EstimationMode;
-import limelight.networktables.LimelightSettings.ImuMode;
-import limelight.networktables.LimelightSettings.LEDMode;
 import limelight.networktables.Orientation3d;
 import limelight.networktables.PoseEstimate;
+import limelight.networktables.LimelightResults;
 import swervelib.SwerveController;
 import swervelib.SwerveDrive;
 import swervelib.SwerveDriveTest;
-import swervelib.imu.SwerveIMU;
 import swervelib.math.SwerveMath;
 import swervelib.parser.SwerveDriveConfiguration;
 import swervelib.parser.SwerveParser;
@@ -78,29 +72,20 @@ import swervelib.parser.SwerveControllerConfiguration;
 
 
 public class SwerveSubsystem extends SubsystemBase {
-  /** Creates a new ExampleSubsystem. */
-  private Limelight limelight;
-  private LimelightPoseEstimator poseEstimator;
-  private final boolean IS_LIMELIGHT_ENABLED = true;
 
-  private double distanceToHub = 0.0;
   private double keepAngle = 0.0;
   private FieldRelativeSpeed m_fieldRelVel = new FieldRelativeSpeed();
   private FieldRelativeSpeed m_lastFieldRelVel = new FieldRelativeSpeed();
   private FieldRelativeAccel m_fieldRelAccel = new FieldRelativeAccel();;
-
-  public double getDistanceToHub() {
-    if (IS_LIMELIGHT_ENABLED) {
-      return distanceToHub;
-    }
-    return 0.0;
-  }
   
   File directory = new File(Filesystem.getDeployDirectory(),"swerve");
   //SwerveDrive  swerveDrive;
   private final SwerveDrive swerveDrive;
+  Limelight limelight;
+  LimelightPoseEstimator limelightPoseEstimator;
 
   public SwerveSubsystem() {
+	this.limelight = new Limelight("limelight");
     SwerveDriveTelemetry.verbosity = TelemetryVerbosity.HIGH;
     try
     {
@@ -114,6 +99,7 @@ public class SwerveSubsystem extends SubsystemBase {
     {
       throw new RuntimeException(e);
     }
+
     swerveDrive.setHeadingCorrection(false);
 
     swerveDrive.setCosineCompensator(false);
@@ -138,60 +124,111 @@ public class SwerveSubsystem extends SubsystemBase {
     // TODO: this lets you actual move the robot
     // setMotorBrake(false);
 
-	SwerveIMU gyro = swerveDrive.getGyro();
-
-	if (IS_LIMELIGHT_ENABLED) {
-      limelight = new Limelight("limelight");
-      limelight.getSettings()
-          .withLimelightLEDMode(LEDMode.PipelineControl)
-          .withCameraOffset(new Pose3d(
-              Inches.of(-11.00).in(Meters),
-              Inches.of(-9.0).in(Meters),
-              Inches.of(12.75).in(Meters),
-              new Rotation3d(0, Degrees.of(21).in(Radians), Degrees.of(180).in(Radians))))
-          // new Rotation3d(0, 21, 180)))
-          .withImuMode(ImuMode.InternalImuMT1Assist)
-          .withImuAssistAlpha(0.01)
-          .save();
-
-      RobotModeTriggers.disabled().onTrue(Commands.runOnce(() -> {
-        System.out.println("Setting LL IMU Assist Alpha to 0.001");
-
-        limelight.getSettings()
-            // .withImuMode(ImuMode.InternalImuMT1Assist)
-            .withImuAssistAlpha(0.001)
-            .save();
-      }).ignoringDisable(true));
-
-      Command onEnable = Commands.runOnce(() -> {
-        System.out.println("Setting LL IMU Assist Alpha to 0.01");
-
-        limelight.getSettings()
-            // .withImuMode(ImuMode.InternalImuMT1Assist)
-            .withImuAssistAlpha(0.01)
-            .save();
-      });
-
-      RobotModeTriggers.teleop().onTrue(onEnable);
-      RobotModeTriggers.autonomous().onTrue(onEnable);
-      RobotModeTriggers.test().onTrue(onEnable);
-
-      // Required for megatag2 in periodic() function before fetching pose.
-      limelight.getSettings()
-          .withRobotOrientation(
-              new Orientation3d(gyro.getRotation3d(),
-                  new AngularVelocity3d(
-                      DegreesPerSecond.of(0),
-                      DegreesPerSecond.of(0),
-                      DegreesPerSecond.of(0))))
-          .save();
-
-      poseEstimator = limelight.createPoseEstimator(EstimationMode.MEGATAG2);
-    }
+	setupLimelight();
     setupPathPlanner();
   }
 
-  public SwerveSubsystem(SwerveDriveConfiguration driveCfg, SwerveControllerConfiguration controllerCfg) {
+  public void setupLimelight()	{
+      swerveDrive.stopOdometryThread();
+      limelight.getSettings()
+               .withPipelineIndex(0)
+               .withCameraOffset(new Pose3d(Units.inchesToMeters(12),
+                                            Units.inchesToMeters(12),
+                                            Units.inchesToMeters(10.5),
+                                            new Rotation3d(0, 0, Units.degreesToRadians(45))))
+               .withAprilTagIdFilter(List.of(17, 18, 19, 20, 21, 22, 6))
+               .save();
+      limelightPoseEstimator = limelight.createPoseEstimator(EstimationMode.MEGATAG2);
+	}
+
+	private int     outofAreaReading = 0;
+    private boolean initialReading = false;
+	@Override
+  	public void periodic() {
+	  // This method will be called once per scheduler run
+      limelight.getSettings()
+               .withRobotOrientation(new Orientation3d(new Rotation3d(swerveDrive.getOdometryHeading()
+                                                                                 .rotateBy(Rotation2d.kZero)),
+                                                       new AngularVelocity3d(DegreesPerSecond.of(0),
+                                                                             DegreesPerSecond.of(0),
+                                                                             DegreesPerSecond.of(0))))
+               .save();
+      Optional<PoseEstimate>     poseEstimates = limelightPoseEstimator.getPoseEstimate();
+      Optional<LimelightResults> results       = limelight.getLatestResults();
+      if (results.isPresent()/* && poseEstimates.isPresent()*/)
+      {
+        LimelightResults result       = results.get();
+        PoseEstimate     poseEstimate = poseEstimates.get();
+        SmartDashboard.putNumber("Avg Tag Ambiguity", poseEstimate.getAvgTagAmbiguity());
+        SmartDashboard.putNumber("Min Tag Ambiguity", poseEstimate.getMinTagAmbiguity());
+        SmartDashboard.putNumber("Max Tag Ambiguity", poseEstimate.getMaxTagAmbiguity());
+        SmartDashboard.putNumber("Avg Distance", poseEstimate.avgTagDist);
+        SmartDashboard.putNumber("Avg Tag Area", poseEstimate.avgTagArea);
+        SmartDashboard.putNumber("Odom Pose/x", swerveDrive.getPose().getX());
+        SmartDashboard.putNumber("Odom Pose/y", swerveDrive.getPose().getY());
+        SmartDashboard.putNumber("Odom Pose/degrees", swerveDrive.getPose().getRotation().getDegrees());
+        SmartDashboard.putNumber("Limelight Pose/x", poseEstimate.pose.getX());
+        SmartDashboard.putNumber("Limelight Pose/y", poseEstimate.pose.getY());
+        SmartDashboard.putNumber("Limelight Pose/degrees", poseEstimate.pose.toPose2d().getRotation().getDegrees());
+        if (result.valid)
+        {
+          // Pose2d estimatorPose = poseEstimate.pose.toPose2d();
+          Pose2d usefulPose     = result.getBotPose2d(Alliance.Blue);
+          double distanceToPose = usefulPose.getTranslation().getDistance(swerveDrive.getPose().getTranslation());
+          if (distanceToPose < 0.5 || (outofAreaReading > 10) || (outofAreaReading > 10 && !initialReading))
+          {
+            if (!initialReading)
+            {
+              initialReading = true;
+            }
+            outofAreaReading = 0;
+            // System.out.println(usefulPose.toString());
+            swerveDrive.setVisionMeasurementStdDevs(VecBuilder.fill(0.05, 0.05, 0.022));
+            // System.out.println(result.timestamp_LIMELIGHT_publish);
+            // System.out.println(result.timestamp_RIOFPGA_capture);
+            swerveDrive.addVisionMeasurement(usefulPose, result.timestamp_RIOFPGA_capture);
+          } else
+          {
+            outofAreaReading += 1;
+          }
+  //        swerveDrive.addVisionMeasurement(estimatorPose, poseEstimate.timestampSeconds);
+        }
+  
+      }
+
+	}
+
+	public Rotation2d getOdometryHeading(){
+      return swerveDrive.getOdometryHeading();
+    }
+
+	/**
+	 * Gets the current yaw angle of the robot, as reported by the swerve pose
+	 * estimator in the underlying drivebase.
+	 * Note, this is not the raw gyro reading, this may be corrected from calls to
+	 * resetOdometry().
+	 *
+	 * @return The yaw angle
+	 */
+	public Rotation2d getHeading() {
+		return getPose().getRotation();
+	}
+
+	/**
+	 * Gets the current pose (position and rotation) of the robot, as reported by
+	 * odometry.
+	 *
+	 * @return The robot's pose
+	 */
+	public Pose2d getPose() {
+		return swerveDrive.getPose();
+	}
+
+	public Rotation2d getRotation() {
+    	return swerveDrive.getYaw();
+  	}
+
+    public SwerveSubsystem(SwerveDriveConfiguration driveCfg, SwerveControllerConfiguration controllerCfg) {
 		swerveDrive = new SwerveDrive(driveCfg,
 				controllerCfg,
 				Constants.MAX_SPEED,
@@ -223,87 +260,6 @@ public class SwerveSubsystem extends SubsystemBase {
     return false;
   }
 
-  
-  @Override
-  public void periodic() {
-	m_fieldRelVel = new FieldRelativeSpeed(getRobotVelocity(), getHeading());
-    m_fieldRelAccel = new FieldRelativeAccel(m_fieldRelVel, m_lastFieldRelVel, GlobalConstants.kLoopTime);
-    m_lastFieldRelVel = m_fieldRelVel;
-    // This method will be called once per scheduler run
-	swerveDrive.updateOdometry(); // TODO: see if this is needed
-
-    if (IS_LIMELIGHT_ENABLED) {
-
-	  LimelightHelpers.SetRobotOrientation("limelight", swerveDrive.getYaw().getDegrees(), 0, 0, 0, 0, 0);
-	  // Get MegaTag2 pose
-      Optional<PoseEstimate> visionEstimate = poseEstimator.getPoseEstimate();
-
-      // If the pose is present
-      visionEstimate.ifPresent((PoseEstimate poseEstimate) -> {
-        if (poseEstimate.tagCount > 0 && poseEstimate.avgTagDist < 4.9) {
-          Logger.recordOutput("Limelight/Megatag2Count", poseEstimate.tagCount);
-
-          Logger.recordOutput("FieldSimulation/LLPose", poseEstimate.pose);
-
-          Pose3d redHub = new Pose3d(
-              Meter.of(11.902),
-              Meter.of(4.031),
-              Meter.of(0.0),
-              new Rotation3d(0, 0, 0));
-
-          distanceToHub = poseEstimate.pose.toPose2d().minus(redHub.toPose2d()).getTranslation().getNorm();
-
-          Logger.recordOutput("FieldSimulation/hubDiff", distanceToHub);
-
-		  Pose2d visionPose = poseEstimate.pose.toPose2d();
-		  // Replace vision rotation with estimator rotation
-			Pose2d fusedPose =
-				new Pose2d(
-					visionPose.getTranslation(),
-					swerveDrive.getPose().getRotation()
-				);
-
-			swerveDrive.addVisionMeasurement(
-				fusedPose,
-				poseEstimate.timestampSeconds);
-          /* Add it to the pose estimator.
-          swerveDrive.addVisionMeasurement(
-              poseEstimate.pose.toPose2d(),
-              poseEstimate.timestampSeconds);*/
-
-          // TODO: possibly add stddevs here
-          // TODO: Instead of providing the limelight's pose as is, replace the
-          // rotation
-          // component with the current pose rotation so the process doesn't take it into account?
-
-        }
-      });
-    }
-  }
-
-  /* This is AI BULLSHIT
-  public FieldRelativeSpeed getFieldRelativeSpeed() {
-	// 1. Get the robot's current estimated velocity relative to itself (Robot Relative) 
-    ChassisSpeeds robotRelSpeeds = swerveDrive.getRobotVelocity();
-        
-    // 2. Get the current field heading (using the corrected YAGSL method)
-    Rotation2d fieldHeading = swerveDrive.getOdometryHeading();
-        
-    // 3. Use your custom class constructor to convert to Field Relative
-    return new FieldRelativeSpeed(robotRelSpeeds, fieldHeading);
-  }
-
-  public FieldRelativeAccel getFieldRelativeAccel() {
-	return new FieldRelativeAccel(); 
-    //To implement this properly, you need state tracking:
-    /*FieldRelativeSpeed currentSpeed = getFieldRelativeSpeed();
-    double dt = Timer.getFPGATimestamp() - lastTimestamp;
-    FieldRelativeAccel accel = new FieldRelativeAccel(currentSpeed, lastSpeed, dt);
-    lastSpeed = currentSpeed;
-    lastTimestamp = Timer.getFPGATimestamp();
-    return accel;
-  }*/
-
   public FieldRelativeSpeed getFieldRelativeSpeed() {
     return m_fieldRelVel;
   }
@@ -314,6 +270,10 @@ public class SwerveSubsystem extends SubsystemBase {
 
   public Rotation2d getGyro() {
     return getHeading();
+  }
+
+  public Pose3d getPose3d() {
+    return new Pose3d(swerveDrive.getPose());
   }
 
    public void setPose(Pose2d pose) {
@@ -418,6 +378,14 @@ public class SwerveSubsystem extends SubsystemBase {
   {
     // Create a path following command using AutoBuilder. This will also trigger event markers.
     return new PathPlannerAuto(pathName);
+  }
+
+  public Command rotateToHeading(Rotation2d rotation2d)	{
+    return run(() -> swerveDrive.drive(new Translation2d(0, 0),
+                                       swerveDrive.getSwerveController().headingCalculate(getHeading().getRadians(),
+                                                                                          getHeading().getRadians() -
+                                                                                          rotation2d.getRadians()),
+                                       false, true));
   }
 
   public void zeroGyro() {
@@ -714,16 +682,6 @@ public class SwerveSubsystem extends SubsystemBase {
 	}
 
 	/**
-	 * Gets the current pose (position and rotation) of the robot, as reported by
-	 * odometry.
-	 *
-	 * @return The robot's pose
-	 */
-	public Pose2d getPose() {
-		return swerveDrive.getPose();
-	}
-
-	/**
 	 * Set chassis speeds with closed-loop velocity control.
 	 *
 	 * @param chassisSpeeds Chassis Speeds to set.
@@ -775,18 +733,6 @@ public class SwerveSubsystem extends SubsystemBase {
 	 */
 	public void setMotorBrake(boolean brake) {
 		swerveDrive.setMotorIdleMode(brake);
-	}
-
-	/**
-	 * Gets the current yaw angle of the robot, as reported by the swerve pose
-	 * estimator in the underlying drivebase.
-	 * Note, this is not the raw gyro reading, this may be corrected from calls to
-	 * resetOdometry().
-	 *
-	 * @return The yaw angle
-	 */
-	public Rotation2d getHeading() {
-		return getPose().getRotation();
 	}
 
 	/**

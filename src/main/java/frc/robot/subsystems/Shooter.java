@@ -8,25 +8,25 @@ import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.Pounds;
 import static edu.wpi.first.units.Units.RPM;
-import static edu.wpi.first.units.Units.RotationsPerSecond;
+import static edu.wpi.first.units.Units.RadiansPerSecond;
+import static edu.wpi.first.units.Units.Second;
+import static edu.wpi.first.units.Units.Seconds;
+import static edu.wpi.first.units.Units.Volts;
 
-import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
 
-import com.revrobotics.RelativeEncoder;
+import org.littletonrobotics.junction.Logger;
 
 import edu.wpi.first.math.Pair;
-import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
-import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.LinearVelocity;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.Constants.ShooterConstants;
 import yams.gearing.GearBox;
 import yams.gearing.MechanismGearing;
 import yams.mechanisms.config.FlyWheelConfig;
@@ -39,20 +39,11 @@ import yams.motorcontrollers.SmartMotorControllerConfig.TelemetryVerbosity;
 import yams.motorcontrollers.local.SparkWrapper;
 
 public class Shooter extends SubsystemBase {
-    private final SparkMax m_motor1 = new SparkMax(33, MotorType.kBrushless);
-    private final SparkMax m_motor2 = new SparkMax(34, MotorType.kBrushless);
-    private final RelativeEncoder m_encoder1;
-    private final RelativeEncoder m_encoder2;
-    private final PIDController m_PID = new PIDController(ShooterConstants.kPID[0], ShooterConstants.kPID[1],
-            ShooterConstants.kPID[2]);
-    private SimpleMotorFeedforward m_FF = new SimpleMotorFeedforward(ShooterConstants.kStatic, ShooterConstants.kFF);
-
-    private double temp_distance = 0.0;
-
-    private double m_RPM = ShooterConstants.kMaxRPM;
+    private final SparkMax leaderSpark = new SparkMax(33, MotorType.kBrushless);
+    private final SparkMax followerSpark = new SparkMax(34, MotorType.kBrushless);
 
     private final SmartMotorControllerConfig smcConfig = new SmartMotorControllerConfig(this)
-        .withFollowers(Pair.of(m_motor2, true))
+        .withFollowers(Pair.of(followerSpark, true))
         .withControlMode(ControlMode.CLOSED_LOOP)
         .withClosedLoopController(0.00936, 0, 0)
         .withFeedforward(new SimpleMotorFeedforward(0.191, 0.11858, 0.0))
@@ -62,22 +53,18 @@ public class Shooter extends SubsystemBase {
         .withIdleMode(MotorMode.COAST)
         .withStatorCurrentLimit(Amps.of(40));
 
-    private final SmartMotorController smc = new SparkWrapper(m_motor1, DCMotor.getNEO(2), smcConfig);
+    private final SmartMotorController smc = new SparkWrapper(leaderSpark, DCMotor.getNEO(2), smcConfig);
 
     private final FlyWheelConfig shooterConfig = new FlyWheelConfig(smc)
         .withDiameter(Inches.of(4))
         .withMass(Pounds.of(1))
-        .withUpperSoftLimit(RPM.of(4000))
-        .withLowerSoftLimit(RPM.of(-4000))
+        .withUpperSoftLimit(RPM.of(6000))
+        .withLowerSoftLimit(RPM.of(0))
         .withTelemetry("Shooter", TelemetryVerbosity.HIGH);
 
     private final FlyWheel shooter = new FlyWheel(shooterConfig);
 
     public Shooter() {
-
-        m_encoder1 = m_motor1.getEncoder();
-        m_encoder2 = m_motor2.getEncoder();
-
         //m_PID.setTolerance(ShooterConstants.kRPMTolerance);
         //m_PID.setIntegratorRange(0, 0);
 
@@ -85,70 +72,65 @@ public class Shooter extends SubsystemBase {
 
     }
 
-    public AngularVelocity getVelocity() {return shooter.getSpeed();}
-    public Command setVelocity(AngularVelocity speed) {return shooter.setSpeed(speed);}
-
-    public void run(double rpm) {
-        /*if (rpm >= ShooterConstants.kMaxRPM) {
-            rpm = ShooterConstants.kMaxRPM;
-        }*/
-        m_RPM = rpm;
-        /*double outputPID = m_PID.calculate(m_encoder1.getVelocity(), m_RPM);
-        double outputFF = m_FF.calculate(m_RPM);
-        double output = outputPID + outputFF;
-
-        if (output <= ShooterConstants.kMaxNegPower) {
-            output = ShooterConstants.kMaxNegPower;
-        }*/
-        rpm = Math.min(rpm, ShooterConstants.kMaxRPM);
-        shooter.setSpeed(RotationsPerSecond.of(rpm / 60.0));
-    }
-
-    /*public void setRPM(LinearVelocity newHorizontalSpeed){
-      shooter.setSpeed(RotationsPerSecond.of(newHorizontalSpeed.in(MetersPerSecond) / shooterConfig.getLength().orElseThrow().times(Math.PI).in(Meters)));
-    }*/
-
-    public Command shootAtDistance(double distanceMeters) {
-        return runOnce(() -> {
-        temp_distance = SHOOTING_SPEED_BY_DISTANCE.get(distanceMeters);
-
-        shooter.setSpeed(RotationsPerSecond.of(temp_distance));
-        });
-    }
-
-    public Command spinUp() {
-        return shooter.setSpeed(RPM.of(-800));
-    }
-
     public Command stopCommand() {
         return runOnce(() -> shooter.setSpeed(RPM.of(0)));
-    }
-
-    @Override
-    public void periodic() {
-        SmartDashboard.putNumber("Shooter RPM1", m_encoder1.getVelocity());
-        SmartDashboard.putNumber("Shooter RPM2", m_encoder2.getVelocity());
-        SmartDashboard.putNumber("Shooter Error", m_RPM-m_encoder1.getVelocity());
-        m_motor1.set(-0.60);
-        m_motor2.set(-0.60);
-    }
-
-    public boolean isAtSetpoint() {
-        double speed_m = m_encoder1.getVelocity();
-        return Math.abs(m_RPM - speed_m) <= ShooterConstants.kRPMTolerance;
-    }
-    
-    public Optional<Angle> atSetpoint() {
-        return shooter.getMechanismSetpoint();
     }
 
     public Command setSpeed(AngularVelocity speed) {
         return shooter.setSpeed(speed);
     }
 
-    //test feature, will not be used, only smarshooter will be used
-    private static final InterpolatingDoubleTreeMap SHOOTING_SPEED_BY_DISTANCE = InterpolatingDoubleTreeMap.ofEntries(
-      Map.entry(2.63, 0.55),
-      Map.entry(3.4, 0.6),
-      Map.entry(4.00, 0.69));
+    public Command setSpeedDynamic(Supplier<AngularVelocity> speedSupplier) {
+        return shooter.setSpeed(speedSupplier);
+    }
+
+    public Command spinUp() {
+        return setSpeed(RPM.of(-2500));
+    }
+
+    public Command stop() {
+        return setSpeed(RPM.of(0));
+    }
+
+    public AngularVelocity getSpeed() {
+        return shooter.getSpeed();
+    }
+
+    public Command sysId() {
+        return shooter.sysId(Volts.of(12), Volts.of(3).per(Second), Seconds.of(7));
+    }
+
+    @Override
+    public void periodic() {
+        Logger.recordOutput("Shooter/LeaderVelocity", leaderSpark.getEncoder().getVelocity());
+        Logger.recordOutput("Shooter/FollowerVelocity", followerSpark.getEncoder().getVelocity());
+        //leaderSpark.set(-0.40);
+        //followerSpark.set(-0.40);
+    }
+
+    @Override
+    public void simulationPeriodic() {
+        shooter.simIterate();
+    }
+
+    private Distance wheelRadius() {
+        return Inches.of(4).div(2);
+    }
+
+    /*public boolean isAtSetpoint() {
+        double speed_m = m_encoder1.getVelocity();
+        return Math.abs(m_RPM - speed_m) <= ShooterConstants.kRPMTolerance;
+    } */
+    
+    public Optional<Angle> atSetpoint() {
+        return shooter.getMechanismSetpoint();
+    }
+
+    public LinearVelocity getTangentialVelocity() {
+    // Calculate tangential velocity at the edge of the wheel and convert to
+    // LinearVelocity
+
+    return MetersPerSecond.of(getSpeed().in(RadiansPerSecond)
+        * wheelRadius().in(Meters));
+    }
 }

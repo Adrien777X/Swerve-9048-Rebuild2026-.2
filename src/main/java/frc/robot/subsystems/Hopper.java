@@ -25,7 +25,7 @@ import yams.motorcontrollers.local.SparkWrapper;
 
 public class Hopper extends SubsystemBase {
 
-  private static final double HOPPER_SPEED = 0.60;
+  private static final double HOPPER_SPEED = 0.26;
 
   // Nova motor controller with NEO motor
   private SparkMax hopper_motor = new SparkMax(Constants.HopperConstants.kHopperMotorId, MotorType.kBrushed);
@@ -36,7 +36,7 @@ public class Hopper extends SubsystemBase {
       .withGearing(new MechanismGearing(GearBox.fromReductionStages(1))) // 4:1 gear reduction
       .withMotorInverted(true)
       .withIdleMode(MotorMode.BRAKE)
-      .withStatorCurrentLimit(Amps.of(40));
+      .withStatorCurrentLimit(Amps.of(30));
 
   private SmartMotorController smc = new SparkWrapper(hopper_motor, DCMotor.getCIM(1), smcConfig);
 
@@ -80,7 +80,7 @@ public class Hopper extends SubsystemBase {
   @Override
   public void periodic() {
     hopper.updateTelemetry();
-    //hopper_motor.set(0.35);
+    //hopper_motor.set(0.25);
   }
 
   @Override
