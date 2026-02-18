@@ -4,23 +4,20 @@
 
 package frc.robot;
 
-import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import swervelib.math.Matter;
-import frc.robot.util.LinearInterpolationTable;
 
-import java.awt.geom.Point2D;
+import static edu.wpi.first.units.Units.Inches;
 
-/**
- * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
- * constants. This class should not be used for any other purpose. All constants should be declared
- * globally (i.e. public static). Do not put anything functional in this class.
- *
- * <p>It is advised to statically import this class (or one of its inner classes) wherever the
- * constants are needed, to reduce verbosity.
- */
+import com.revrobotics.spark.config.SparkBaseConfig;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import com.revrobotics.spark.config.SparkMaxConfig;
+
+
 public final class Constants {
 
   public static enum AimPoints {
@@ -58,8 +55,8 @@ public final class Constants {
 
 
   public static class OperatorConstants {
-    public static final int kDriverControllerPort = 0;
-    public static final int kOperatorControllerPort = 1;
+    public static final int kDriverControllerPort = 2;
+    public static final int kOperatorControllerPort = 3;
     public static final double DEADBAND = 0.05;
     public static final double LEFT_Y_DEADBAND = 0.1;
     public static final double RIGHT_X_DEADBAND = 0.05;
@@ -89,6 +86,9 @@ public final class Constants {
     // compared agaisnt the absolute value of the drive command
     public static final double kMinTranslationCommand = DriveConstants.kMaxSpeedMetersPerSecond
         * Math.pow(DriveConstants.kInnerDeadband, 2);
+
+    public static Pose3d cameraOffsetFromRobotCenter = new Pose3d(new Translation3d(), new Rotation3d());
+    public static Translation3d turretPivotCenterFromCamera = new Translation3d(Inches.of(0), Inches.of(0),Inches.of(0));
   }
 
   public static final class IntakeConstants {
@@ -127,6 +127,19 @@ public final class Constants {
 
   public static final class ShooterConstants {
     
+  }
+
+  public class ClimberConstants {
+
+    public static final int kClimbermotorID = 53;
+
+    public static final double kClimberSpeed = 0.7;
+  }
+
+  public static final class climberConfigs {
+
+    public static final SparkBaseConfig climberConfig =
+        new SparkMaxConfig().idleMode(IdleMode.kBrake).smartCurrentLimit(40).inverted(false);
   }
 
   // Auto constants OLD APRIL TAG ALIGN REEFSCAPE 2025

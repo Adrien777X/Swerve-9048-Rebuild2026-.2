@@ -85,7 +85,7 @@ public class Shooter extends SubsystemBase {
     }
 
     public Command spinUp() {
-        return setSpeed(RPM.of(-2500));
+        return setSpeed(RPM.of(-6000));
     }
 
     public Command stop() {

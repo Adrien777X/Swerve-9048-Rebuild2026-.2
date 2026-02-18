@@ -39,7 +39,7 @@ public class ShootOnTheMoveCommand extends Command {
     // control. We
     // will be using the superstructure to control the shooting mechanism so it's a
     // requirement.
-    // addRequirements(superstructure);
+    addRequirements(superstructure);
 
     // TODO: figure out if the above is actually required. Right now, when you start
     // some other command, the auto aim can't start back up again

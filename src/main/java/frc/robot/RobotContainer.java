@@ -23,6 +23,7 @@ import frc.robot.subsystems.SwerveSubsystem;
 import frc.robot.util.maplesim.RebuiltFuelOnFly;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.Constants.ShooterConstants;
+import frc.robot.subsystems.Antijam;
 import frc.robot.subsystems.ClimberSubsystem;
 import frc.robot.subsystems.HoodSubsystem;
 import frc.robot.subsystems.Hopper;
@@ -77,6 +78,7 @@ public class RobotContainer {
   private final Kicker kicker = new Kicker();
   private final Shooter m_shooter = new Shooter();
   private final Intake intake = new Intake();
+  private final Antijam antijam = new Antijam();
   
   SendableChooser<Command> autoChooser = new SendableChooser<>();
   //private NamedCommandsRegistry namedCommandsRegistry;
@@ -90,7 +92,7 @@ public class RobotContainer {
   private final CommandXboxController m_operatorController =
       new CommandXboxController(OperatorConstants.kOperatorControllerPort);
 
-  private final Superstructure superstructure = new Superstructure(m_shooter, turret, hood, intake, hopper, kicker);
+  private final Superstructure superstructure = new Superstructure(m_shooter, turret, hood, intake, hopper, kicker, antijam);
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -101,12 +103,7 @@ public class RobotContainer {
     autoChooser.setDefaultOption("Do Nothing", Commands.none());
     autoChooser.addOption("Drive Forward", drivebase.driveForward().withTimeout(3));
     SmartDashboard.putData("Choose Auto", autoChooser);
-    /*allianceChooser.setDefaultOption("blue", Alliance.Blue);
-    allianceChooser.addOption("red", Alliance.Red);
-    SmartDashboard.putData("Alliance Chooser", allianceChooser);*/
-    //resetar ODOMETriA Teste NãO AtIVaR
-    //Controller1.back().onTrue(new InstantCommand(() -> drive.setPose(new Pose2d(1.30, 5.55, Rotation2d.fromDegrees(0.0)))));
-    // Configure the trigger bindings
+    
     configureBindings();
     drivebase.setDefaultCommand(driveFieldOrientedAngularVelocity);
   }
@@ -145,6 +142,7 @@ public class RobotContainer {
     //teste heading maintain w/ Yagsl
     Command driveFieldOrientedDirectAngle = drivebase.driveFieldOriented(driveDriectAngle);
     drivebase.setDefaultCommand(driveFieldOrientedDirectAngle);
+    turret.setDefaultCommand(turret.set(0));
 
     /* Schedule `ExampleCommand` when `exampleCondition` changes to `true`
     new Trigger(m_exampleSubsystem::exampleCondition)
@@ -153,13 +151,9 @@ public class RobotContainer {
     // Schedule `exampleMethodCommand` when the Xbox controller's B button is pressed,
     // cancelling on release.
 
-    /*m_operatorController.rightBumper().whileTrue(
-        climber.setClimberMotorSpeed(-0.2)
-            .finallyDo(() -> climber.setClimberMotorSpeed(0)));
+    m_operatorController.rightBumper().whileTrue(climber.c_climb());
 
-    m_operatorController.leftBumper().whileTrue(
-        climber.setClimberMotorSpeed(0.2)
-            .finallyDo(() -> climber.setClimberMotorSpeed(0)));*/
+    m_operatorController.leftBumper().whileTrue(climber.c_climbReverse());
     
     m_driverController.povUp().onTrue((Commands.runOnce(()->drivebase.zeroGyro(), drivebase)));
 
@@ -173,11 +167,11 @@ public class RobotContainer {
 				}));
 
     new Trigger(
-        () -> m_operatorController.getRightTriggerAxis() > 0.1 // Use a small threshold
+        () -> m_operatorController.getRightTriggerAxis() > 0.2 // Use a small threshold
     ).whileTrue(intake.intakeCommand());
 
     new Trigger(
-        () -> m_operatorController.getLeftTriggerAxis() > 0.1 // Use a small threshold
+        () -> m_operatorController.getLeftTriggerAxis() > 0.2 // Use a small threshold
     ).whileTrue(intake.ejectCommand());
 
     //m_operatorController.rightBumper().whileTrue(superstructure.setIntakeDeployAndRoll().withName("OperatorControls.intakedeployed"));
@@ -192,17 +186,21 @@ public class RobotContainer {
     // D-Pad Left to rezero the encoder
     //m_operatorController.povLeft().onTrue(intake.rezero());
 
-    m_operatorController.x().toggleOnTrue(
+    m_driverController.x().whileTrue(
         new ShootOnTheMoveCommand(drivebase, superstructure, () -> superstructure.getAimPoint())
             .ignoringDisable(true)
             .withName("OperatorControls.aimCommand"));
+
+    m_operatorController.x().whileTrue(
+        superstructure.shootCommand().withName("OperatorControls.shooter")
+    );
 
     m_operatorController.y()
         .whileTrue(superstructure.setIntakeDeployAndRoll().withName("OperatorControls.intakeDeployed"));
     
     m_operatorController.a().whileTrue(
         superstructure.feedAllCommand()
-            .finallyDo(() -> superstructure.stopFeedingAllCommand().schedule()));
+    );
 
     m_operatorController.b().whileTrue(
         superstructure.backFeedAllCommand()
@@ -218,7 +216,6 @@ public class RobotContainer {
   public static Command fireFuel(SwerveSubsystem drivetrain, Superstructure superstructure) {
     return Commands.runOnce(() -> {
       SimulatedArena arena = SimulatedArena.getInstance();
-
       GamePieceProjectile fuel = new RebuiltFuelOnFly(
           drivetrain.getPose().getTranslation(),
           new Translation2d(

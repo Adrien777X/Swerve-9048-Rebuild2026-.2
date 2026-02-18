@@ -12,6 +12,8 @@ import static edu.wpi.first.units.Units.Second;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.littletonrobotics.junction.Logger;
@@ -19,20 +21,34 @@ import org.littletonrobotics.junction.Logger;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Constants;
 import frc.robot.Constants.TurretConstants;
 import frc.robot.util.MathUtils;
+import limelight.networktables.AngularVelocity3d;
+import limelight.networktables.LimelightPoseEstimator;
+import limelight.networktables.LimelightResults;
+import limelight.networktables.Orientation3d;
+import limelight.Limelight;
+import limelight.networktables.LimelightPoseEstimator.EstimationMode;
+import limelight.networktables.LimelightSettings.LEDMode;
+import limelight.networktables.PoseEstimate;
+import limelight.networktables.target.pipeline.NeuralClassifier;
 import yams.gearing.GearBox;
 import yams.gearing.MechanismGearing;
 import yams.mechanisms.config.MechanismPositionConfig;
@@ -52,6 +68,9 @@ public class Turret extends SubsystemBase {
 
   private final double MAX_ONE_DIR_FOV = TurretConstants.kmaxminAngle;
 
+  Limelight                limelight;
+  LimelightPoseEstimator   limelightPoseEstimator;
+
   public final Translation3d turretTranslation = new Translation3d(-0.205, 0.0, 0.375);
 
   private SmartMotorControllerConfig smcConfig = new SmartMotorControllerConfig(this)
@@ -69,18 +88,42 @@ public class Turret extends SubsystemBase {
 
   private SmartMotorController smc = new SparkWrapper(m_motor, DCMotor.getNeoVortex(1), smcConfig);
 
+  private final MechanismPositionConfig robotToMechanism = new MechanismPositionConfig()
+      .withMaxRobotHeight(Meters.of(0.55))
+      .withMaxRobotLength(Meters.of(0.68))
+      .withRelativePosition(new Translation3d(Meters.of(-0.205), Meters.of(0.0), Meters.of(0.375)));
+
+  
   private final PivotConfig turretConfig = new PivotConfig(smc)
-      .withHardLimit(Degrees.of(-MAX_ONE_DIR_FOV - 5), Degrees.of(MAX_ONE_DIR_FOV + 5))
+      .withHardLimit(Degrees.of(-MAX_ONE_DIR_FOV), Degrees.of(MAX_ONE_DIR_FOV))
       .withStartingPosition(Degrees.of(0))
       .withMOI(0.05)
       .withTelemetry("Turret", TelemetryVerbosity.HIGH)
-      .withMechanismPositionConfig(
-        new MechanismPositionConfig().withMovementPlane(Plane.XY).withRelativePosition(turretTranslation));
+      .withMechanismPositionConfig(robotToMechanism)
+      /*.withMechanismPositionConfig(
+        new MechanismPositionConfig().withMovementPlane(Plane.XY).withRelativePosition(turretTranslation))*/;
 
   private Pivot turret = new Pivot(turretConfig);
 
   public Turret() {
+    setupLimelight();
   }
+
+  public void setupLimelight()  {
+
+    limelight = new Limelight("limelight");
+    limelight.getSettings()
+             .withPipelineIndex(0)
+             .withCameraOffset(new Pose3d(Units.inchesToMeters(0),
+                                          Units.inchesToMeters(0),
+                                          Units.inchesToMeters(0),
+                                          new Rotation3d(0, 0, Units.degreesToRadians(0))))
+             .withAprilTagIdFilter(List.of(17, 18, 19, 20, 21, 22, 6, 7, 8, 9, 10, 11))
+             .save();
+             limelightPoseEstimator = limelight.createPoseEstimator(EstimationMode.MEGATAG2);
+  }
+
+  
 
   public Command setAngle(Angle angle) {
     return turret.setAngle(angle);
@@ -150,15 +193,61 @@ public class Turret extends SubsystemBase {
     m_motor.stopMotor();
   }
 
+  private int     outofAreaReading = 0;
+  private boolean initialReading   = false;
+
   @Override
   public void periodic() {
     turret.updateTelemetry();
 
-    Logger.recordOutput("ASCalibration/FinalComponentPoses", new Pose3d[] {
-        new Pose3d(
-            turretTranslation,
-            new Rotation3d(0, 0, turret.getAngle().in(Radians)))
-    });
+    turret.updateTelemetry();
+
+    limelight.getSettings()
+             .withRobotOrientation(new Orientation3d(new Rotation3d(SwerveSubsystem.swerveDrive.getOdometryHeading()
+                                                                               .rotateBy(Rotation2d.kZero)),
+                                                     new AngularVelocity3d(DegreesPerSecond.of(0),
+                                                                           DegreesPerSecond.of(0),
+                                                                           DegreesPerSecond.of(0))))
+              .withCameraOffset(Constants.DriveConstants.cameraOffsetFromRobotCenter.rotateAround(Constants.DriveConstants.turretPivotCenterFromCamera, new Rotation3d(0, Degrees.of(65).in(Radians), turret.getAngle().in(Radians))))
+             .save(); //camera pose is the camera pose from the center of robot
+    Optional<PoseEstimate>     poseEstimates = limelightPoseEstimator.getPoseEstimate();
+    Optional<LimelightResults> results       = limelight.getLatestResults();
+    if (results.isPresent()/* && poseEstimates.isPresent()*/)
+    {
+        LimelightResults result       = results.get();
+        PoseEstimate     poseEstimate = poseEstimates.get();
+        SmartDashboard.putNumber("Avg Tag Ambiguity", poseEstimate.getAvgTagAmbiguity());
+        SmartDashboard.putNumber("Min Tag Ambiguity", poseEstimate.getMinTagAmbiguity());
+        SmartDashboard.putNumber("Max Tag Ambiguity", poseEstimate.getMaxTagAmbiguity());
+        SmartDashboard.putNumber("Avg Distance", poseEstimate.avgTagDist);
+        SmartDashboard.putNumber("Avg Tag Area", poseEstimate.avgTagArea);
+        SmartDashboard.putNumber("Limelight Pose/x", poseEstimate.pose.getX());
+        SmartDashboard.putNumber("Limelight Pose/y", poseEstimate.pose.getY());
+        SmartDashboard.putNumber("Limelight Pose/degrees", poseEstimate.pose.toPose2d().getRotation().getDegrees());
+        if (result.valid)
+        {
+          // Pose2d estimatorPose = poseEstimate.pose.toPose2d();
+          Pose2d usefulPose     = result.getBotPose2d(Alliance.Blue);
+          double distanceToPose = usefulPose.getTranslation().getDistance(SwerveSubsystem.swerveDrive.getPose().getTranslation());
+          if (distanceToPose < 0.5 || (outofAreaReading > 10) || (outofAreaReading > 10 && !initialReading))
+          {
+            if (!initialReading)
+            {
+              initialReading = true;
+            }
+            outofAreaReading = 0;
+            
+            // System.out.println(usefulPose.toString());
+            SwerveSubsystem.swerveDrive.setVisionMeasurementStdDevs(VecBuilder.fill(0.05, 0.05, 0.022));
+            // System.out.println(result.timestamp_LIMELIGHT_publish);
+            // System.out.println(result.timestamp_RIOFPGA_capture);
+            SwerveSubsystem.swerveDrive.addVisionMeasurement(usefulPose, result.timestamp_RIOFPGA_capture);
+          } else
+          {
+            outofAreaReading += 1;
+          }
+       }
+    }
   }
 
   @Override

@@ -4,7 +4,6 @@
 
 package frc.robot;
 
-import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
@@ -54,9 +53,9 @@ public class Robot extends TimedRobot {
     // block in order for anything in the Command-based framework to work.
     CommandScheduler.getInstance().run();
 
-    System.out.println("tv: " + NetworkTableInstance.getDefault().getTable("limelight").getEntry("tv").getDouble(0));
-    System.out.println("tx: " + NetworkTableInstance.getDefault().getTable("limelight").getEntry("tx").getDouble(0));
-    System.out.println("ty: " + NetworkTableInstance.getDefault().getTable("limelight").getEntry("ty").getDouble(0));
+    //System.out.println("tv: " + NetworkTableInstance.getDefault().getTable("limelight").getEntry("tv").getDouble(0));
+    //System.out.println("tx: " + NetworkTableInstance.getDefault().getTable("limelight").getEntry("tx").getDouble(0));
+    //System.out.println("ty: " + NetworkTableInstance.getDefault().getTable("limelight").getEntry("ty").getDouble(0));
   }
 
   /** This function is called once each time the robot enters Disabled mode. */

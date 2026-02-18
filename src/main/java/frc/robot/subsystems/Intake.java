@@ -40,7 +40,7 @@ import yams.motorcontrollers.local.SparkWrapper;
 import frc.robot.Constants;
 
 public class Intake extends SubsystemBase {
-    private static final double INTAKE_SPEED = 1.0;
+    private static final double INTAKE_SPEED = 0.7;
 
     private final SparkMax m_rollerLeader  = new SparkMax(Constants.IntakeConstants.kRollerMotorIdLeader, MotorType.kBrushless);
 
@@ -64,8 +64,14 @@ public class Intake extends SubsystemBase {
 
     private FlyWheel intake = new FlyWheel(intakeConfig);
 
+    private SparkFlex pivotMotor = new SparkFlex(Constants.IntakeConstants.kPivotMotorId, MotorType.kBrushless);
+
     private SmartMotorControllerConfig intakePivotSmartMotorConfig = new SmartMotorControllerConfig(this)
       .withControlMode(ControlMode.CLOSED_LOOP)
+      .withExternalEncoder(pivotMotor.getAbsoluteEncoder())
+      .withExternalEncoderInverted(true)
+      .withUseExternalFeedbackEncoder(true)
+      .withExternalEncoderZeroOffset(Degrees.of(0))
       .withClosedLoopController(25, 0, 0, DegreesPerSecond.of(180), DegreesPerSecondPerSecond.of(180))
       .withFeedforward(new ArmFeedforward(0, 10, 0))
       .withTelemetry("IntakePivotMotor", TelemetryVerbosity.HIGH)
@@ -76,8 +82,6 @@ public class Intake extends SubsystemBase {
       .withStatorCurrentLimit(Amps.of(20))
       .withClosedLoopRampRate(Seconds.of(0.1))
       .withOpenLoopRampRate(Seconds.of(0.1));
-
-    private SparkFlex pivotMotor = new SparkFlex(Constants.IntakeConstants.kPivotMotorId, MotorType.kBrushless);
 
     private SmartMotorController intakePivotController = new SparkWrapper(pivotMotor, DCMotor.getNeoVortex(1), intakePivotSmartMotorConfig);
 

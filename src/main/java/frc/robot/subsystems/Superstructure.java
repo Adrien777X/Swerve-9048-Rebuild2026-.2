@@ -30,6 +30,8 @@ public class Superstructure extends SubsystemBase {
   private final Intake intake;
   private final Hopper hopper;
   private final Kicker kicker;
+  private final Antijam antijam;
+
 
   // Tolerance for "at setpoint" checks
   private static final AngularVelocity SHOOTER_TOLERANCE = RPM.of(100);
@@ -49,13 +51,14 @@ public class Superstructure extends SubsystemBase {
   private Translation3d aimPoint = Constants.AimPoints.RED_HUB.value;
 
   public Superstructure(Shooter shooter, Turret turret, HoodSubsystem hood, Intake intake,
-      Hopper hopper, Kicker kicker) {
+      Hopper hopper, Kicker kicker, Antijam antijam) {
     this.shooter = shooter;
     this.turret = turret;
     this.hood = hood;
     this.intake = intake;
     this.hopper = hopper;
     this.kicker = kicker;
+    this.antijam = antijam;
 
     // Create triggers for checking if mechanisms are at their targets
     this.isShooterAtSpeed = new Trigger(
@@ -229,6 +232,10 @@ public class Superstructure extends SubsystemBase {
     return kicker.feedCommand().withName("Superstructure.kickerFeed");
   }
 
+  public Command kickerReverseCommand() {
+    return kicker.ejectCommand().withName("Superstructure.kickerFeed");
+  }
+
   /**
    * Command to run the kicker stop while held, stops when released.
    */
@@ -236,17 +243,30 @@ public class Superstructure extends SubsystemBase {
     return kicker.stopCommand().withName("Superstructure.kickerStop");
   }
 
-  public Command feedAllCommand() {
-    return Commands.parallel(
-        hopper.feedCommand().asProxy(),
-        kicker.feedCommand().asProxy()).withName("Superstructure.feedAll");
-    // intake.setPivotAngle(Degrees.of(46)).asProxy()).withName("Superstructure.feedAll");
+  public Command antijamFeedCommand() {
+    return antijam.feedCommand().withName("Superstructure.antijamFeed");
   }
+
+  public Command antijamStopCommand() {
+    return antijam.stopCommand().withName("Superstructure.antijamStop");
+  }
+
+
+public Command feedAllCommand() {
+  return Commands.parallel(
+      hopper.feedCommand().asProxy(),
+      kicker.feedCommand().asProxy(),
+      antijam.feedCommand().asProxy()
+  ).withName("Superstructure.feedAll");
+}
+
 
   public Command backFeedAllCommand() {
     return Commands.parallel(
-        hopper.backFeedCommand().asProxy(),
-        intake.backFeedAndRollCommand().asProxy()).withName("Superstructure.backFeedAll");
+        kicker.ejectCommand().asProxy().withName("Kicker.eject"),
+        intake.ejectCommand().asProxy().withName("Superstructure.eject"),
+        hopper.backFeedCommand().asProxy().withName("Superstructure.backFeedAll")
+        );
   }
 
   // public Command intakeBounceCommand() {
@@ -260,12 +280,14 @@ public class Superstructure extends SubsystemBase {
   // .withName("Superstructure.intakeBounce");
   // }
 
-  public Command stopFeedingAllCommand() {
-    return Commands.parallel(
-        hopper.stopCommand().asProxy(),
-        kicker.stopCommand().asProxy(),
-        intake.deployAndRollCommand().asProxy()).withName("Superstructure.stopFeedingAll");
-  }
+public Command stopFeedingAllCommand() {
+  return Commands.parallel(
+      hopper.stopCommand().asProxy(),
+      kicker.stopCommand().asProxy(),
+      antijam.stopCommand().asProxy(),
+      intake.deployAndRollCommand().asProxy()
+  ).withName("Superstructure.stopFeedingAll");
+}
 
   /**
    * Command to set the intake pivot angle.
