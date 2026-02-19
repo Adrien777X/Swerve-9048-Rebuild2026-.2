@@ -78,7 +78,7 @@ public class Superstructure extends SubsystemBase {
    */
   public Command stopAllCommand() {
     return Commands.parallel(
-        shooter.stopCommand().asProxy(),
+        shooter.stop().asProxy(),
         turret.set(0).asProxy(),
         hood.set(0).asProxy()).withName("Superstructure.stopAll");
   }
@@ -264,7 +264,6 @@ public Command feedAllCommand() {
   public Command backFeedAllCommand() {
     return Commands.parallel(
         kicker.ejectCommand().asProxy().withName("Kicker.eject"),
-        intake.ejectCommand().asProxy().withName("Superstructure.eject"),
         hopper.backFeedCommand().asProxy().withName("Superstructure.backFeedAll")
         );
   }
@@ -282,11 +281,10 @@ public Command feedAllCommand() {
 
 public Command stopFeedingAllCommand() {
   return Commands.parallel(
-      hopper.stopCommand().asProxy(),
-      kicker.stopCommand().asProxy(),
-      antijam.stopCommand().asProxy(),
-      intake.deployAndRollCommand().asProxy()
-  ).withName("Superstructure.stopFeedingAll");
+      hopper.stopCommand(),
+      kicker.stopCommand(),
+      antijam.stopCommand()
+    ).withName("Superstructure.stopFeedingAll");
 }
 
   /**

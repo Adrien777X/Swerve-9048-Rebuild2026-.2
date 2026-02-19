@@ -67,7 +67,7 @@ public class RobotContainer {
   Command chosenAuto;
 
   private static final Angle STOW_ANGLE = Degrees.of(0);
-  private static final Angle DEPLOY_ANGLE = Degrees.of(148);
+  private static final Angle DEPLOY_ANGLE = Degrees.of(90);
   private static final Angle HOLD_ANGLE = Degrees.of(115); // Example middle position
 
   private final SwerveSubsystem drivebase = new SwerveSubsystem();
@@ -186,25 +186,27 @@ public class RobotContainer {
     // D-Pad Left to rezero the encoder
     //m_operatorController.povLeft().onTrue(intake.rezero());
 
-    m_driverController.x().whileTrue(
-        new ShootOnTheMoveCommand(drivebase, superstructure, () -> superstructure.getAimPoint())
-            .ignoringDisable(true)
-            .withName("OperatorControls.aimCommand"));
+    //m_driverController.x().whileTrue(
+      //  new ShootOnTheMoveCommand(drivebase, superstructure, () -> superstructure.getAimPoint())
+        //    .ignoringDisable(true)
+          //  .withName("OperatorControls.aimCommand"));
 
     m_operatorController.x().whileTrue(
-        superstructure.shootCommand().withName("OperatorControls.shooter")
-    );
+        superstructure.shootCommand().finallyDo(() -> superstructure.stopShootingCommand().schedule()));
 
     m_operatorController.y()
         .whileTrue(superstructure.setIntakeDeployAndRoll().withName("OperatorControls.intakeDeployed"));
     
     m_operatorController.a().whileTrue(
-        superstructure.feedAllCommand()
-    );
+        superstructure.feedAllCommand().finallyDo(() -> superstructure.stopFeedingAllCommand().schedule()));
 
     m_operatorController.b().whileTrue(
         superstructure.backFeedAllCommand()
             .finallyDo(() -> superstructure.stopFeedingAllCommand().schedule()));
+
+    m_operatorController.back().whileTrue(
+          superstructure.stopFeedingAllCommand()    
+        );
 
     m_operatorController.povUp().onTrue(superstructure.setTurretForward().withName("OperatorControls.setTurretForward"));
     m_operatorController.povLeft().onTrue(superstructure.setTurretLeft().withName("OperatorControls.setTurretLeft"));

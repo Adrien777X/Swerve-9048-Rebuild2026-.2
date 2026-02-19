@@ -49,7 +49,14 @@ public class Antijam extends SubsystemBase {
 
   public Command feedCommand() {
     return startEnd(
-        () -> antijam.set(-0.55).schedule(),
+        () -> antijam.set(-0.35).schedule(),
+        () -> antijam.set(0).schedule()
+    ).withName("Antijam.Feed");
+  }
+
+  public Command backfeedCommand() {
+    return startEnd(
+        () -> antijam.set(0.35).schedule(),
         () -> antijam.set(0).schedule()
     ).withName("Antijam.Feed");
   }
@@ -61,7 +68,7 @@ public class Antijam extends SubsystemBase {
   @Override
   public void periodic() {
     antijam.updateTelemetry();
-    antijamMotorHex.set(antijamMotor.get());
+    antijamMotorHex.set(-antijamMotor.get());
   }
 
   @Override

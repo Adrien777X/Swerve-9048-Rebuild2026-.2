@@ -25,7 +25,7 @@ import yams.motorcontrollers.local.SparkWrapper;
 
 public class Hopper extends SubsystemBase {
 
-  private static final double HOPPER_SPEED = 0.26;
+  private static final double HOPPER_SPEED = 0.35;
 
   // Nova motor controller with NEO motor
   private SparkMax hopper_motor = new SparkMax(Constants.HopperConstants.kHopperMotorId, MotorType.kBrushed);

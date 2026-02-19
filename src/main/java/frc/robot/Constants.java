@@ -47,16 +47,16 @@ public final class Constants {
       return DriverStation.getAlliance().get() == DriverStation.Alliance.Red ? RED_FAR_SIDE.value : BLUE_FAR_SIDE.value;
     }
   }
-
-  public static final double ROBOT_MASS = 90 * 0.453592;
+  //90 * 0.453592
+  public static final double ROBOT_MASS = 100;
   public static final Matter CHASSIS = new Matter(new Translation3d(0, 0, Units.inchesToMeters(11.2)), ROBOT_MASS);
   public static final double LOOP_TIME = 0.13;
   public static final double MAX_SPEED = Units.feetToMeters(15);
 
 
   public static class OperatorConstants {
-    public static final int kDriverControllerPort = 2;
-    public static final int kOperatorControllerPort = 3;
+    public static final int kDriverControllerPort = 0;
+    public static final int kOperatorControllerPort = 1;
     public static final double DEADBAND = 0.05;
     public static final double LEFT_Y_DEADBAND = 0.1;
     public static final double RIGHT_X_DEADBAND = 0.05;

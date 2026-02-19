@@ -58,8 +58,8 @@ public class Shooter extends SubsystemBase {
     private final FlyWheelConfig shooterConfig = new FlyWheelConfig(smc)
         .withDiameter(Inches.of(4))
         .withMass(Pounds.of(1))
-        .withUpperSoftLimit(RPM.of(6000))
-        .withLowerSoftLimit(RPM.of(0))
+        .withUpperSoftLimit(RPM.of(5600))
+        .withLowerSoftLimit(RPM.of(-5600))
         .withTelemetry("Shooter", TelemetryVerbosity.HIGH);
 
     private final FlyWheel shooter = new FlyWheel(shooterConfig);
@@ -85,7 +85,7 @@ public class Shooter extends SubsystemBase {
     }
 
     public Command spinUp() {
-        return setSpeed(RPM.of(-6000));
+        return setSpeed(RPM.of(-3500));
     }
 
     public Command stop() {
