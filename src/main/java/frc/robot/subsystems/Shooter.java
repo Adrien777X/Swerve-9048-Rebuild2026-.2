@@ -9,6 +9,7 @@ import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.Pounds;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
+import static edu.wpi.first.units.Units.RotationsPerSecond;
 import static edu.wpi.first.units.Units.Second;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
@@ -42,6 +43,8 @@ public class Shooter extends SubsystemBase {
     private final SparkMax leaderSpark = new SparkMax(33, MotorType.kBrushless);
     private final SparkMax followerSpark = new SparkMax(34, MotorType.kBrushless);
 
+    private double setPoint = 0.0;
+
     private final SmartMotorControllerConfig smcConfig = new SmartMotorControllerConfig(this)
         .withFollowers(Pair.of(followerSpark, true))
         .withControlMode(ControlMode.CLOSED_LOOP)
@@ -49,7 +52,7 @@ public class Shooter extends SubsystemBase {
         .withFeedforward(new SimpleMotorFeedforward(0.191, 0.11858, 0.0))
         .withTelemetry("ShooterMotor", TelemetryVerbosity.HIGH)
         .withGearing(new MechanismGearing(GearBox.fromReductionStages(1)))
-        .withMotorInverted(true)
+        .withMotorInverted(false)
         .withIdleMode(MotorMode.COAST)
         .withStatorCurrentLimit(Amps.of(40));
 
@@ -80,12 +83,23 @@ public class Shooter extends SubsystemBase {
         return shooter.setSpeed(speed);
     }
 
+    public void setVelocitySetpoint(AngularVelocity speed) {
+        smc.setVelocity(speed);
+        smc.setKp(0.00936);
+        smc.setFeedforward(0.191, 0.11858, 0, 0);
+    }
+
+    public Command setVelocity(AngularVelocity speed)   {
+        setPoint = speed.in(RotationsPerSecond);
+        return shooter.setSpeed(speed);
+    }
+
     public Command setSpeedDynamic(Supplier<AngularVelocity> speedSupplier) {
         return shooter.setSpeed(speedSupplier);
     }
 
     public Command spinUp() {
-        return setSpeed(RPM.of(-3500));
+        return setSpeed(RPM.of(3500));
     }
 
     public Command stop() {

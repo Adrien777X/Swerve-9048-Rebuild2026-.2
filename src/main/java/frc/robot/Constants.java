@@ -4,13 +4,17 @@
 
 package frc.robot;
 
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.DriverStation;
 import swervelib.math.Matter;
 
+import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Inches;
 
 import com.revrobotics.spark.config.SparkBaseConfig;
@@ -20,6 +24,11 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 
 public final class Constants {
 
+  public static final class fieldConstants{
+    public static final Pose2d BLUE_HUB_POSE =new Pose2d(4.6, 4.05, new Rotation2d());
+    public static final Pose2d RED_HUB_POSE =  new Pose2d(11.9,4.05,new Rotation2d());
+  }
+  
   public static enum AimPoints {
     RED_HUB(new Translation3d(11.938, 4.034536, 1.5748)),
     RED_OUTPOST(new Translation3d(15.75, 7.25, 0)),
@@ -55,7 +64,7 @@ public final class Constants {
 
 
   public static class OperatorConstants {
-    public static final int kDriverControllerPort = 0;
+    public static final int kDriverControllerPort = 0; //DO NOT CHANGE, REORGANIZE CONTROLS ON THE DRIVER STATION : 
     public static final int kOperatorControllerPort = 1;
     public static final double DEADBAND = 0.05;
     public static final double LEFT_Y_DEADBAND = 0.1;
@@ -95,6 +104,8 @@ public final class Constants {
     public static int kRollerMotorIdLeader = 30;
     public static int kRollerMotorIdFollower = 37;
     public static int kPivotMotorId = 32;
+    public static final int pivotEncoder = 9;
+    public static final double pivotEncoderOffsetDeg = 123.4;
   }
 
   public static class HopperConstants {
@@ -126,7 +137,11 @@ public final class Constants {
   }
 
   public static final class ShooterConstants {
-    
+    public static final double flywheelOffsetRPS = 0.0; 
+    public static final Angle FIXED_HOOD = Degrees.of(40);
+    public static final double MIN_RPS = 10;
+    public static final double MAX_RPS = 90;
+    public static final double METERS_PER_ROTATION = 0.08; 
   }
 
   public class ClimberConstants {

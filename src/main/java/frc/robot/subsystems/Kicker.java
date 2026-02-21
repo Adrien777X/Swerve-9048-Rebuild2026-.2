@@ -38,7 +38,7 @@ public class Kicker extends SubsystemBase {
           .withControlMode(ControlMode.OPEN_LOOP)
           .withTelemetry("KickerMotor", TelemetryVerbosity.HIGH)
           .withGearing(new MechanismGearing(GearBox.fromReductionStages(3)))
-          .withMotorInverted(false)
+          .withMotorInverted(true)
           .withIdleMode(MotorMode.BRAKE)
           .withStatorCurrentLimit(Amps.of(20));
 
@@ -47,7 +47,7 @@ public class Kicker extends SubsystemBase {
 
   private final FlyWheelConfig kickerConfig =
       new FlyWheelConfig(smc)
-          .withDiameter(Inches.of(4))
+          .withDiameter(Inches.of(2))
           .withMass(Pounds.of(0.5))
           .withUpperSoftLimit(RPM.of(6000))
           .withLowerSoftLimit(RPM.of(-6000))
@@ -61,18 +61,24 @@ public class Kicker extends SubsystemBase {
    * Run kicker while held
    */
   public Command feedCommand() {
-    return kicker.set(-KICKER_SPEED).withName("Kicker.Feed");
+    return startEnd(
+        () -> kicker.set(1).schedule(),
+        () -> kicker.set(0).schedule()
+    ).withName("Kicker.Feed");
   }
 
   public Command ejectCommand() {
-    return kicker.set(KICKER_SPEED).withName("Kicker.Feed");
+    return startEnd(
+        () -> kicker.set(-1).schedule(),
+        () -> kicker.set(0).schedule()
+    ).withName("Kicker.Eject");
   }
 
   /**
    * Stop kicker
    */
   public Command stopCommand() {
-    return kicker.set(0).withName("Kicker.Stop");
+    return kicker.set(0).withName("Kicker.stop");
   }
 
   @Override

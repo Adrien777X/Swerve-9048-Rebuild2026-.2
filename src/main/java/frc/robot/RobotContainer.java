@@ -5,11 +5,15 @@
 package frc.robot;
 
 import org.ironmaple.simulation.SimulatedArena;
+import org.ironmaple.simulation.drivesims.configs.SwerveModuleSimulationConfig;
 import org.ironmaple.simulation.gamepieces.GamePieceProjectile;
 import org.littletonrobotics.junction.Logger;
 
 import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Translation3d;
+
 import static edu.wpi.first.units.Units.Feet;
 import static edu.wpi.first.units.Units.FeetPerSecond;
 import edu.wpi.first.units.measure.Distance;
@@ -20,7 +24,9 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.commands.TurretedShooter.ShootOnTheMoveCommand;
 import frc.robot.subsystems.Superstructure;
 import frc.robot.subsystems.SwerveSubsystem;
+import frc.robot.util.FieldConstants;
 import frc.robot.util.maplesim.RebuiltFuelOnFly;
+import frc.robot.Constants.AimPoints;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.Constants.ShooterConstants;
 import frc.robot.subsystems.Antijam;
@@ -37,6 +43,7 @@ import swervelib.SwerveDrive;
 import swervelib.SwerveInputStream;
 
 import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -66,8 +73,8 @@ import com.pathplanner.lib.path.PathPlannerPath;
 public class RobotContainer {
   Command chosenAuto;
 
-  private static final Angle STOW_ANGLE = Degrees.of(0);
-  private static final Angle DEPLOY_ANGLE = Degrees.of(90);
+  private static final Angle STOW_ANGLE = Degrees.of(258);
+  private static final Angle DEPLOY_ANGLE = Degrees.of(350);
   private static final Angle HOLD_ANGLE = Degrees.of(115); // Example middle position
 
   private final SwerveSubsystem drivebase = new SwerveSubsystem();
@@ -138,11 +145,9 @@ public class RobotContainer {
    * joysticks}.
    */
   private void configureBindings() {
-
     //teste heading maintain w/ Yagsl
     Command driveFieldOrientedDirectAngle = drivebase.driveFieldOriented(driveDriectAngle);
     drivebase.setDefaultCommand(driveFieldOrientedDirectAngle);
-    turret.setDefaultCommand(turret.set(0));
 
     /* Schedule `ExampleCommand` when `exampleCondition` changes to `true`
     new Trigger(m_exampleSubsystem::exampleCondition)
@@ -186,23 +191,27 @@ public class RobotContainer {
     // D-Pad Left to rezero the encoder
     //m_operatorController.povLeft().onTrue(intake.rezero());
 
-    //m_driverController.x().whileTrue(
-      //  new ShootOnTheMoveCommand(drivebase, superstructure, () -> superstructure.getAimPoint())
-        //    .ignoringDisable(true)
-          //  .withName("OperatorControls.aimCommand"));
+    /*m_driverController.x().whileTrue(
+        new ShootOnTheMoveCommand(drivebase, superstructure, () -> superstructure.getAimPoint(), m_shooter, turret)
+          .ignoringDisable(true)
+          .withName("OperatorControls.aimCommand"));*/
+
+    m_driverController.x().whileTrue(
+      new ShootOnTheMoveCommand(drivebase, superstructure, m_shooter, turret, () -> AimPoints.getAllianceHubPosition())
+        .ignoringDisable(true)
+        .withName("OperatorControls.aimCommand"));
 
     m_operatorController.x().whileTrue(
         superstructure.shootCommand().finallyDo(() -> superstructure.stopShootingCommand().schedule()));
-
-    m_operatorController.y()
-        .whileTrue(superstructure.setIntakeDeployAndRoll().withName("OperatorControls.intakeDeployed"));
     
+    /*m_operatorController.a().whileTrue(
+      superstructure.feedAllCommand().finallyDo(() -> superstructure.stopFeedingAllCommand().schedule())
+    );*/
     m_operatorController.a().whileTrue(
-        superstructure.feedAllCommand().finallyDo(() -> superstructure.stopFeedingAllCommand().schedule()));
-
+      superstructure.feedAllCommand());
+      
     m_operatorController.b().whileTrue(
-        superstructure.backFeedAllCommand()
-            .finallyDo(() -> superstructure.stopFeedingAllCommand().schedule()));
+        superstructure.backFeedAllCommand());
 
     m_operatorController.back().whileTrue(
           superstructure.stopFeedingAllCommand()    

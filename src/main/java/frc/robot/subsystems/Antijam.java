@@ -31,7 +31,7 @@ public class Antijam extends SubsystemBase {
       .withControlMode(ControlMode.OPEN_LOOP)
       .withTelemetry("AntijamMotor", TelemetryVerbosity.HIGH)
       .withGearing(new MechanismGearing(GearBox.fromReductionStages(5)))
-      .withMotorInverted(true)
+      .withMotorInverted(false)
       .withIdleMode(MotorMode.BRAKE)
       .withStatorCurrentLimit(Amps.of(20));
 
@@ -49,14 +49,14 @@ public class Antijam extends SubsystemBase {
 
   public Command feedCommand() {
     return startEnd(
-        () -> antijam.set(-0.35).schedule(),
+        () -> antijam.set(-0.45).schedule(),
         () -> antijam.set(0).schedule()
     ).withName("Antijam.Feed");
   }
 
   public Command backfeedCommand() {
     return startEnd(
-        () -> antijam.set(0.35).schedule(),
+        () -> antijam.set(0.45).schedule(),
         () -> antijam.set(0).schedule()
     ).withName("Antijam.Feed");
   }
@@ -68,7 +68,7 @@ public class Antijam extends SubsystemBase {
   @Override
   public void periodic() {
     antijam.updateTelemetry();
-    antijamMotorHex.set(-antijamMotor.get());
+    antijamMotorHex.set(-antijamMotor.get() * 1.7);
   }
 
   @Override

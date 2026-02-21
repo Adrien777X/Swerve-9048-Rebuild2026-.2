@@ -5,6 +5,7 @@ import java.util.function.Supplier;
 
 import org.littletonrobotics.junction.Logger;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -17,29 +18,35 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj2.command.Command;
+import frc.robot.subsystems.Shooter;
 import frc.robot.subsystems.Superstructure;
 import frc.robot.subsystems.SwerveSubsystem;
+import frc.robot.subsystems.Turret;
 
 public class ShootOnTheMoveCommand extends Command {
   private final SwerveSubsystem drivetrain;
   private final Superstructure superstructure;
+  private final Shooter shooter;
+  private final Turret turret;
 
   private Supplier<Translation3d> aimPointSupplier; // The point to aim at
   private AngularVelocity latestShootSpeed;
   private Angle latestHoodAngle;
   private Angle latestTurretAngle;
 
-  public ShootOnTheMoveCommand(SwerveSubsystem drivetrain, Superstructure superstructure,
+  public ShootOnTheMoveCommand(SwerveSubsystem drivetrain, Superstructure superstructure, Shooter shooter, Turret turret,
       Supplier<Translation3d> aimPointSupplier) {
     this.drivetrain = drivetrain;
     this.superstructure = superstructure;
+    this.shooter = shooter;
+    this.turret = turret;
     this.aimPointSupplier = aimPointSupplier;
 
     // We use the drivetrain to determine linear velocity, but don't require it for
     // control. We
     // will be using the superstructure to control the shooting mechanism so it's a
     // requirement.
-    addRequirements(superstructure);
+    addRequirements(superstructure, shooter, turret);
 
     // TODO: figure out if the above is actually required. Right now, when you start
     // some other command, the auto aim can't start back up again
@@ -55,16 +62,6 @@ public class ShootOnTheMoveCommand extends Command {
 
     // TODO: when this current command ends, we should probably cancel the dynamic
     // aim command
-    superstructure.aimDynamicCommand(
-        () -> {
-          return this.latestShootSpeed;
-        },
-        () -> {
-          return this.latestTurretAngle;
-        },
-        () -> {
-          return this.latestHoodAngle;
-        }).schedule();
   }
 
   @Override
@@ -117,7 +114,10 @@ public class ShootOnTheMoveCommand extends Command {
     Logger.recordOutput("ShootOnTheMove/CalculatedHeading", calculatedHeading);
     Logger.recordOutput("ShootOnTheMove/distanceToTarget", distanceToTarget);
 
-    latestTurretAngle = calculatedHeading;
+    //latestTurretAngle = calculatedHeading;
+    Angle wrappedHeading = Degrees.of(MathUtil.angleModulus(calculatedHeading.in(Degrees)));
+
+    latestTurretAngle = wrappedHeading;
     latestShootSpeed = calculateRequiredShooterSpeed(correctedDistance);
 
     // TODO: add this back if/when we have a real hood, for now, just set it to the
@@ -125,34 +125,32 @@ public class ShootOnTheMoveCommand extends Command {
     // latestHoodAngle = calculateRequiredHoodAngle(correctedDistance);
     latestHoodAngle = superstructure.getHoodAngle();
 
-    superstructure.setShooterSetpoints(
-        latestShootSpeed,
-        latestTurretAngle,
-        latestHoodAngle);
+    shooter.setVelocitySetpoint(latestShootSpeed);
+    turret.setAngle(latestTurretAngle);
 
-    // System.out.println("Shooting at distance: " + correctedDistance + " requires
-    // speed: " + latestShootSpeed
-    // + ", hood angle: " + latestHoodAngle + ", turret angle: " +
-    // latestTurretAngle);
+    //System.out.println("Shooting at distance: " + correctedDistance + " requiresspeed: " + latestShootSpeed + ", hood angle: " + latestHoodAngle + ", turret angle: " + latestTurretAngle);
+    System.out.println("Shoot RPM: " + latestShootSpeed.in(RPM));
+    System.out.println("Turret deg: " + latestTurretAngle.in(Degrees));
   }
 
   private double getFlightTime(Distance distanceToTarget) {
     // Simple linear approximation based on empirical data.
-    return TIME_OF_FLIGHT_BY_DISTANCE.get(distanceToTarget.in(Meters));
+    return 0+TIME_OF_FLIGHT_BY_DISTANCE.get(distanceToTarget.in(Meters));
   }
 
   private AngularVelocity calculateRequiredShooterSpeed(Distance distanceToTarget) {
-    return RPM.of(SHOOTING_SPEED_BY_DISTANCE.get(distanceToTarget.in(Meters)));
+    return RPM.of(0+SHOOTING_SPEED_BY_DISTANCE.get(distanceToTarget.in(Meters)));
   }
 
   private Angle calculateRequiredHoodAngle(Distance distanceToTarget) {
-    return Degrees.of(HOOD_ANGLE_BY_DISTANCE.get(distanceToTarget.in(Meters)));
+    return Degrees.of(0+HOOD_ANGLE_BY_DISTANCE.get(distanceToTarget.in(Meters)));
   }
 
   // meters, seconds
   private static final InterpolatingDoubleTreeMap TIME_OF_FLIGHT_BY_DISTANCE = InterpolatingDoubleTreeMap.ofEntries(
       Map.entry(1.0, 1.0),
-      Map.entry(4.86, 1.5));
+      Map.entry(4.86, 1.5),
+      Map.entry(5.50, 1.9));
   // TODO: add more data points here.
   // CLOSE: NEED
   // MID: maybe good enough
@@ -169,5 +167,7 @@ public class ShootOnTheMoveCommand extends Command {
   private static final InterpolatingDoubleTreeMap HOOD_ANGLE_BY_DISTANCE = InterpolatingDoubleTreeMap.ofEntries(
       Map.entry(1.0, 15.0),
       Map.entry(2.0, 30.0),
-      Map.entry(3.0, 45.0));
+      Map.entry(3.0, 45.0),
+      Map.entry(4.0, 50.0),
+      Map.entry(5.0, 60.0));
 }

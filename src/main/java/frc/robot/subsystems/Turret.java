@@ -75,14 +75,14 @@ public class Turret extends SubsystemBase {
 
   private SmartMotorControllerConfig smcConfig = new SmartMotorControllerConfig(this)
     .withControlMode(ControlMode.CLOSED_LOOP)
-    .withClosedLoopController(1.15, 0, 0.1, DegreesPerSecond.of(2440), DegreesPerSecondPerSecond.of(2440))
-    .withFeedforward(new SimpleMotorFeedforward(0, 2.5, 0.1))
+    .withClosedLoopController(0.2, 0.1, 0.1, DegreesPerSecond.of(2440), DegreesPerSecondPerSecond.of(2440))
+    .withFeedforward(new SimpleMotorFeedforward(0.3, 2.5, 0.1))
     .withTelemetry("TurretMotor", TelemetryVerbosity.HIGH)
-    .withGearing(new MechanismGearing(GearBox.fromReductionStages(5, 3.7)))
+    .withGearing(new MechanismGearing(GearBox.fromReductionStages(5, 3.58)))
     .withMotorInverted(true)
     .withIdleMode(MotorMode.BRAKE)
-    .withSoftLimit(Degrees.of(-MAX_ONE_DIR_FOV), Degrees.of(MAX_ONE_DIR_FOV))
-    .withStatorCurrentLimit(Amps.of(24))
+    .withSoftLimit(Degrees.of(-90), Degrees.of(90))
+    .withStatorCurrentLimit(Amps.of(35))
     .withClosedLoopRampRate(Seconds.of(0.1))
     .withOpenLoopRampRate(Seconds.of(0.1));
 
@@ -95,7 +95,7 @@ public class Turret extends SubsystemBase {
 
   
   private final PivotConfig turretConfig = new PivotConfig(smc)
-      .withHardLimit(Degrees.of(-MAX_ONE_DIR_FOV), Degrees.of(MAX_ONE_DIR_FOV))
+      //.withHardLimit(Degrees.of(-MAX_ONE_DIR_FOV), Degrees.of(MAX_ONE_DIR_FOV))
       .withStartingPosition(Degrees.of(0))
       .withMOI(0.05)
       .withTelemetry("Turret", TelemetryVerbosity.HIGH)
@@ -118,7 +118,7 @@ public class Turret extends SubsystemBase {
                                           Units.inchesToMeters(0),
                                           Units.inchesToMeters(0),
                                           new Rotation3d(0, 0, Units.degreesToRadians(0))))
-             .withAprilTagIdFilter(List.of(17, 18, 19, 20, 21, 22, 6, 7, 8, 9, 10, 11))
+             //.withAprilTagIdFilter(List.of(17, 18, 19, 20, 21, 22, 6, 7, 8, 9, 10, 11))
              .save();
              limelightPoseEstimator = limelight.createPoseEstimator(EstimationMode.MEGATAG2);
   }
@@ -131,6 +131,14 @@ public class Turret extends SubsystemBase {
 
   public Command setAngleDynamic(Supplier<Angle> turretAngleSupplier) {
     return turret.setAngle(turretAngleSupplier);
+  }
+
+  public void setAngleSetpoint(Angle angle) {
+    smc.setPosition(angle);
+    smc.setKp(0.2);
+    smc.setKs(0.1);
+    smc.setKd(0.1);
+    smc.setFeedforward(0.3, 0.5, 0.1, 0);
   }
 
   public Command center() {
