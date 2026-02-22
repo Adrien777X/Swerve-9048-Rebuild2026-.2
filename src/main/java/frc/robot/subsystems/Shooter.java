@@ -84,14 +84,7 @@ public class Shooter extends SubsystemBase {
     }
 
     public void setVelocitySetpoint(AngularVelocity speed) {
-        smc.setVelocity(speed);
-        smc.setKp(0.00936);
-        smc.setFeedforward(0.191, 0.11858, 0, 0);
-    }
-
-    public Command setVelocity(AngularVelocity speed)   {
-        setPoint = speed.in(RotationsPerSecond);
-        return shooter.setSpeed(speed);
+        shooter.setMechanismVelocitySetpoint(speed);
     }
 
     public Command setSpeedDynamic(Supplier<AngularVelocity> speedSupplier) {
@@ -99,7 +92,11 @@ public class Shooter extends SubsystemBase {
     }
 
     public Command spinUp() {
-        return setSpeed(RPM.of(3500));
+        //return setSpeed(RPM.of(3500));
+        return startEnd(
+            () -> shooter.setSpeed(RPM.of(3500)).schedule(),
+            () -> shooter.setSpeed(RPM.of(0)).schedule()
+        ).withName("SHooter.ManualSpinUp");
     }
 
     public Command stop() {

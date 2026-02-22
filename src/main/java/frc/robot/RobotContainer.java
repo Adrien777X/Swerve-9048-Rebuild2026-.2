@@ -55,13 +55,17 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
+import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import static edu.wpi.first.units.Units.Degrees;
 
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.auto.NamedCommands;
+import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.pathplanner.lib.path.PathPlannerPath;
 
 /**
@@ -105,10 +109,29 @@ public class RobotContainer {
   public RobotContainer() {
     //this.namedCommandsRegistry = new NamedCommandsRegistry( drivebase, turret, intake, superstructure, hopper, kicker, smartShooter);
       //setNamedCommandsForAuto();
+    NamedCommands.registerCommand("Intake", superstructure.intakeCommand());
     
+    NamedCommands.registerCommand("feedAll", superstructure.feedAllCommand());
+    
+    NamedCommands.registerCommand("PivotDown", intake.setPivotAngle(DEPLOY_ANGLE));
+    
+    NamedCommands.registerCommand(
+      "smartShoot",
+      new ParallelCommandGroup(
+        new ShootOnTheMoveCommand(
+          drivebase, superstructure, m_shooter, turret, () -> AimPoints.getAllianceHubPosition())
+          .ignoringDisable(false)
+          .alongWith(new WaitCommand(.25).andThen(superstructure.feedAllCommand()))));
+    
+    NamedCommands.registerCommand("ClimbUp", climber.c_climb().withTimeout(2.0));
+
+    NamedCommands.registerCommand("ClimbDown", climber.c_climbReverse().withTimeout(2.3));
+
     autoChooser = AutoBuilder.buildAutoChooser();
     autoChooser.setDefaultOption("Do Nothing", Commands.none());
     autoChooser.addOption("Drive Forward", drivebase.driveForward().withTimeout(3));
+    autoChooser.addOption("Start TOP - TARGET neutral - SIDE left blue", new PathPlannerAuto("neutral top"));
+    autoChooser.addOption("START bottom - TARGET deposit - SIDE via left blue", new PathPlannerAuto("Start bottom deposit"));
     SmartDashboard.putData("Choose Auto", autoChooser);
     
     configureBindings();
@@ -198,7 +221,7 @@ public class RobotContainer {
 
     m_driverController.x().whileTrue(
       new ShootOnTheMoveCommand(drivebase, superstructure, m_shooter, turret, () -> AimPoints.getAllianceHubPosition())
-        .ignoringDisable(true)
+        .ignoringDisable(false)
         .withName("OperatorControls.aimCommand"));
 
     m_operatorController.x().whileTrue(

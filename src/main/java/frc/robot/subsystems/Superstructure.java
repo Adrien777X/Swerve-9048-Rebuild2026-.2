@@ -201,14 +201,20 @@ public class Superstructure extends SubsystemBase {
    * Command to run the intake while held.
    */
   public Command intakeCommand() {
-    return intake.intakeCommand().withName("Superstructure.intake");
+    return Commands.parallel(
+        intake.intakeCommand().asProxy(),
+        hopper.feedCommand().asProxy()
+        ).withName("Superstructure.intake");
   }
 
   /**
    * Command to eject while held.
    */
   public Command ejectCommand() {
-    return intake.ejectCommand().withName("Superstructure.eject");
+    return Commands.parallel(
+        intake.ejectCommand(),
+        hopper.backFeedCommand()
+    ).withName("Superstructure.eject");
   }
 
   /**
@@ -263,9 +269,9 @@ public Command feedAllCommand() {
 
   public Command backFeedAllCommand() {
     return Commands.parallel(
-        kicker.ejectCommand().asProxy().withName("Kicker.eject"),
-        hopper.backFeedCommand().asProxy().withName("Superstructure.backFeedAll")
-        );
+        kicker.ejectCommand().asProxy(),
+        hopper.backFeedCommand().asProxy()
+    ).withName("Superstructure.backFeedAll");
   }
 
   // public Command intakeBounceCommand() {

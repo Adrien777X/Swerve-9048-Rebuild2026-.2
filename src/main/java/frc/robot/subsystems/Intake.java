@@ -75,7 +75,7 @@ public class Intake extends SubsystemBase {
 
     private SmartMotorControllerConfig intakePivotSmartMotorConfig = new SmartMotorControllerConfig(this)
       .withControlMode(ControlMode.CLOSED_LOOP)
-      //.withExternalEncoder(pivotEncoder)
+      .withExternalEncoder(pivotEncoder)
       //.withExternalEncoderInverted(false)
       //.withExternalEncoderGearing(1)
       //.withExternalEncoderZeroOffset(Degrees.of(355))

@@ -5,6 +5,12 @@
     "data": {
       "commands": [
         {
+          "type": "named",
+          "data": {
+            "name": "PivotDown"
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "hub - start Top"
@@ -13,19 +19,25 @@
         {
           "type": "named",
           "data": {
-            "name": "Shooting"
+            "name": "smartShoot"
           }
         },
         {
           "type": "wait",
           "data": {
-            "waitTime": 4.5
+            "waitTime": 5.0
           }
         },
         {
           "type": "path",
           "data": {
             "pathName": "ball getter deposit"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Intake"
           }
         }
       ]

@@ -5,15 +5,9 @@
     "data": {
       "commands": [
         {
-          "type": "named",
-          "data": {
-            "name": "PivotDown"
-          }
-        },
-        {
           "type": "path",
           "data": {
-            "pathName": "hub - start bottom"
+            "pathName": "hub - start Top neutral"
           }
         },
         {
@@ -31,25 +25,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "ball getter deposit"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "Intake"
-          }
-        },
-        {
-          "type": "wait",
-          "data": {
-            "waitTime": 5.0
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "New Path"
+            "pathName": "Copy of hub - start Top neutral"
           }
         },
         {

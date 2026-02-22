@@ -134,11 +134,7 @@ public class Turret extends SubsystemBase {
   }
 
   public void setAngleSetpoint(Angle angle) {
-    smc.setPosition(angle);
-    smc.setKp(0.2);
-    smc.setKs(0.1);
-    smc.setKd(0.1);
-    smc.setFeedforward(0.3, 0.5, 0.1, 0);
+    turret.setMechanismPositionSetpoint(angle);
   }
 
   public Command center() {

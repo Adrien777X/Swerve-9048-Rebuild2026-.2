@@ -8,20 +8,20 @@
       },
       "prevControl": null,
       "nextControl": {
-        "x": 3.4510554561717353,
-        "y": 5.892808586762076
+        "x": 2.3297887323916346,
+        "y": 5.839419014078206
       },
       "isLocked": false,
       "linkedName": "Start top 1 rebuild "
     },
     {
       "anchor": {
-        "x": 4.619284436493739,
-        "y": 7.450447227191413
+        "x": 3.0802992957726314,
+        "y": 7.340440140839245
       },
       "prevControl": {
-        "x": 2.217924865831843,
-        "y": 7.564025044722718
+        "x": 1.6591197183080144,
+        "y": 7.3404401408433
       },
       "nextControl": null,
       "isLocked": false,
@@ -31,7 +31,14 @@
   "rotationTargets": [],
   "constraintZones": [],
   "pointTowardsZones": [],
-  "eventMarkers": [],
+  "eventMarkers": [
+    {
+      "name": "PivotDown",
+      "waypointRelativePos": 0.9197761194029846,
+      "endWaypointRelativePos": null,
+      "command": null
+    }
+  ],
   "globalConstraints": {
     "maxVelocity": 4.572,
     "maxAcceleration": 3.0,

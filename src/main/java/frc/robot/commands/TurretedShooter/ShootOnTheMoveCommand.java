@@ -115,9 +115,11 @@ public class ShootOnTheMoveCommand extends Command {
     Logger.recordOutput("ShootOnTheMove/distanceToTarget", distanceToTarget);
 
     //latestTurretAngle = calculatedHeading;
-    Angle wrappedHeading = Degrees.of(MathUtil.angleModulus(calculatedHeading.in(Degrees)));
+    double rawHeadingDegrees = calculatedHeading.in(Degrees);
+    double wrappedDegrees = MathUtil.inputModulus(rawHeadingDegrees, -180.0, 180.0);
+    double safeDegrees = MathUtil.clamp(wrappedDegrees, -90.0, 90.0);
 
-    latestTurretAngle = wrappedHeading;
+    latestTurretAngle = Degrees.of(safeDegrees);
     latestShootSpeed = calculateRequiredShooterSpeed(correctedDistance);
 
     // TODO: add this back if/when we have a real hood, for now, just set it to the
@@ -126,7 +128,7 @@ public class ShootOnTheMoveCommand extends Command {
     latestHoodAngle = superstructure.getHoodAngle();
 
     shooter.setVelocitySetpoint(latestShootSpeed);
-    turret.setAngle(latestTurretAngle);
+    turret.setAngleSetpoint(latestTurretAngle);
 
     //System.out.println("Shooting at distance: " + correctedDistance + " requiresspeed: " + latestShootSpeed + ", hood angle: " + latestHoodAngle + ", turret angle: " + latestTurretAngle);
     System.out.println("Shoot RPM: " + latestShootSpeed.in(RPM));
